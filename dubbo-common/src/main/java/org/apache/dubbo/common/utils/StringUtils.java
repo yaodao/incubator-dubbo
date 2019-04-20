@@ -745,6 +745,8 @@ public final class StringUtils {
         return buf.toString();
     }
 
+    // 将字符串 "stuAddr" 变成串 "stu,addr"
+    // "helloAAbEEEcc" 变成串 "hello,a,ab,e,e,ecc"，假设split是逗号
     public static String camelToSplitName(String camelName, String split) {
         if (isEmpty(camelName)) {
             return camelName;

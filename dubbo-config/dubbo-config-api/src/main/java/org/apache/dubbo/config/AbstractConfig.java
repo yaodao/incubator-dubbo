@@ -390,6 +390,8 @@ public abstract class AbstractConfig implements Serializable {
         }).collect(Collectors.toSet());
     }
 
+    // 根据setter方法, 取getter方法上@Parameter注解里的属性名
+    // （getter方法上有@Parameter注解，可以为属性取别名，所以最后返回的属性名可以是实际的属性名，也可以是属性的别名, 取决于@Parameter注解里的配置）
     private static String extractPropertyName(Class<?> clazz, Method setter) throws Exception {
         String propertyName = setter.getName().substring("set".length());
         Method getter = null;
