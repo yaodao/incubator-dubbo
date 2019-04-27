@@ -445,6 +445,7 @@ public class Constants {
 
     public static final String COMMA_SEPARATOR = ",";
 
+    // 匹配"空格逗号空格"
     public static final Pattern COMMA_SPLIT_PATTERN = Pattern
             .compile("\\s*[,]+\\s*");
 

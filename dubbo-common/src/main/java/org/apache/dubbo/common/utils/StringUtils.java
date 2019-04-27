@@ -44,8 +44,9 @@ public final class StringUtils {
     public static final String[] EMPTY_STRING_ARRAY = new String[0];
 
     private static final Logger logger = LoggerFactory.getLogger(StringUtils.class);
-    private static final Pattern KVP_PATTERN = Pattern.compile("([_.a-zA-Z0-9][-_.a-zA-Z0-9]*)[=](.*)"); //key value pair pattern.
-    private static final Pattern INT_PATTERN = Pattern.compile("^\\d+$");
+    //匹配key=value形式的串, value可以为空, =必须有, group(1)是key, group(2)是value
+    private static final Pattern KVP_PATTERN = Pattern.compile("([_.a-zA-Z0-9][-_.a-zA-Z0-9]*)[=](.*)");
+    private static final Pattern INT_PATTERN = Pattern.compile("^\\d+$"); // 全是数字
     private static final int PAD_LIMIT = 8192;
 
     private StringUtils() {
@@ -457,6 +458,7 @@ public final class StringUtils {
         return true;
     }
 
+    // 判断values字符串里, 是否包含value (不是直接用String.contains判断, 而是先把字符串拆成数组, 再判断是否包含)
     public static boolean isContains(String values, String value) {
         return isNotEmpty(values) && isContains(Constants.COMMA_SPLIT_PATTERN.split(values), value);
     }
@@ -477,6 +479,8 @@ public final class StringUtils {
         return false;
     }
 
+    // 判断str是否是数值
+    // 参数二表示是否可以有一个点
     public static boolean isNumeric(String str, boolean allowDot) {
         if (str == null || str.isEmpty()) {
             return false;
@@ -520,6 +524,7 @@ public final class StringUtils {
     }
 
     /**
+     * 感觉这个功能就是在异常栈前面加上自己的msg， 最后异常栈和msg一起作为字符串返回
      * @param msg
      * @param e
      * @return string
@@ -537,6 +542,7 @@ public final class StringUtils {
     }
 
     /**
+     * 项目中没有用到的函数
      * translate.
      *
      * @param src  source string.
@@ -572,6 +578,7 @@ public final class StringUtils {
     }
 
     /**
+     * 和String.split() 一样的作用, 不知道为什么这里用简单的方式又实现了一遍, 而且项目里也没用到
      * split.
      *
      * @param ch char.
@@ -616,7 +623,7 @@ public final class StringUtils {
 
     /**
      * join string like javascript.
-     *
+     * 使用split分隔符将元素连接成字符串
      * @param array String array.
      * @param split split
      * @return String.
@@ -676,7 +683,8 @@ public final class StringUtils {
 
     /**
      * parse key-value pair.
-     *
+     * 将串 "name=org.apache.dubbo.rpc.service.GenericService&version=1.0.15&lb=lcr"
+     * 用&分隔, 再使用pattern匹配出"key=value"串, 再将key和value放到map
      * @param str           string.
      * @param itemSeparator item separator.
      * @return key-value map;
@@ -686,7 +694,7 @@ public final class StringUtils {
         Map<String, String> map = new HashMap<String, String>(tmp.length);
         for (int i = 0; i < tmp.length; i++) {
             Matcher matcher = KVP_PATTERN.matcher(tmp[i]);
-            if (!matcher.matches()) {
+            if (!matcher.matches()) { // 需要tmp全串匹配pattern
                 continue;
             }
             map.put(matcher.group(1), matcher.group(2));
@@ -694,6 +702,7 @@ public final class StringUtils {
         return map;
     }
 
+    // 将字符串qs, 解析成map （需要qs是key=value形式的字符串）
     public static String getQueryStringValue(String qs, String key) {
         Map<String, String> map = StringUtils.parseQueryString(qs);
         return map.get(key);
@@ -712,6 +721,7 @@ public final class StringUtils {
         return parseKeyValuePair(qs, "\\&");
     }
 
+    // 项目未用到
     public static String getServiceKey(Map<String, String> ps) {
         StringBuilder buf = new StringBuilder();
         String group = ps.get(Constants.GROUP_KEY);
@@ -726,6 +736,7 @@ public final class StringUtils {
         return buf.toString();
     }
 
+    // 将参数ps中的entry 按字符顺序组成串, 最终的串形如 "lb=lcr&name=org&version=1.0.15"
     public static String toQueryString(Map<String, String> ps) {
         StringBuilder buf = new StringBuilder();
         if (ps != null && ps.size() > 0) {
@@ -772,6 +783,7 @@ public final class StringUtils {
         return buf == null ? camelName : buf.toString();
     }
 
+    // 把参数args中的元素, 用逗号分隔并返回
     public static String toArgumentString(Object[] args) {
         StringBuilder buf = new StringBuilder();
         for (Object arg : args) {

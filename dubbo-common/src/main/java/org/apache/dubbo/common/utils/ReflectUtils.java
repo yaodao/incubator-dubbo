@@ -125,6 +125,7 @@ public final class ReflectUtils {
     private ReflectUtils() {
     }
 
+    // 判断cls是否是基本类型，String，Nubmer类型及其子类，Date类型及其子类 的类类型对象。
     public static boolean isPrimitives(Class<?> cls) {
         if (cls.isArray()) {
             return isPrimitive(cls.getComponentType());
@@ -132,6 +133,7 @@ public final class ReflectUtils {
         return isPrimitive(cls);
     }
 
+    // 判断cls是否是基本类型，String，Nubmer类型及其子类，Date类型及其子类 的类类型对象。
     public static boolean isPrimitive(Class<?> cls) {
         return cls.isPrimitive() || cls == String.class || cls == Boolean.class || cls == Character.class
                 || Number.class.isAssignableFrom(cls) || Date.class.isAssignableFrom(cls);
