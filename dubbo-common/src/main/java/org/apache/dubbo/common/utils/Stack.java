@@ -25,6 +25,7 @@ import java.util.List;
  */
 
 public class Stack<E> {
+    // 实际元素的个数
     private int mSize = 0;
 
     private List<E> mElements = new ArrayList<E>();
@@ -139,5 +140,13 @@ public class Stack<E> {
     public void clear() {
         mSize = 0;
         mElements.clear();
+    }
+
+    public static void main(String[] args) {
+        List arr = new ArrayList();
+        arr.add("aa");
+        arr.add("bb");
+        arr.remove(0);
+        System.out.println(arr.size());
     }
 }

@@ -80,8 +80,8 @@ public class CIDRUtils {
             targetSize = 16;
         }
 
-        BigInteger mask = (new BigInteger(1, maskBuffer.array())).not().shiftRight(prefixLength);
-
+        BigInteger mask = (new BigInteger(1, maskBuffer.array())).not();
+        mask = mask.shiftRight(prefixLength);
         ByteBuffer buffer = ByteBuffer.wrap(inetAddress.getAddress());
         BigInteger ipVal = new BigInteger(1, buffer.array());
 
@@ -96,21 +96,30 @@ public class CIDRUtils {
 
     }
 
+    /**
+     * 将数组array 扩容到targetSize大小 (用0填充, 填充从数组的0下标开始)
+     * @param array
+     * @param targetSize 用于指定最后生成的byte数组的大小
+     * @return 返回扩容后的byte数组
+     */
     private byte[] toBytes(byte[] array, int targetSize) {
         int counter = 0;
         List<Byte> newArr = new ArrayList<Byte>();
+        // 参数array原样复制给newArr (后面的判断条件是必须有的, 因为targetSize可以大于array.size)
         while (counter < targetSize && (array.length - 1 - counter >= 0)) {
             newArr.add(0, array[array.length - 1 - counter]);
             counter++;
         }
 
+        // 填充newArr, 使其达到参数targetSize指定的大小
         int size = newArr.size();
         for (int i = 0; i < (targetSize - size); i++) {
-
+            // 从0下标开始填充
             newArr.add(0, (byte) 0);
         }
 
         byte[] ret = new byte[newArr.size()];
+        // 原样复制newArr中的元素到ret中
         for (int i = 0; i < newArr.size(); i++) {
             ret[i] = newArr.get(i);
         }
@@ -126,8 +135,12 @@ public class CIDRUtils {
         return this.endAddress.getHostAddress();
     }
 
+    // 判断给定的ip地址是否在startAddress和endAddress之间 (这提供了个思路, 把ip转成BigInteger, 再判断该地址是否在指定区间)
     public boolean isInRange(String ipAddress) throws UnknownHostException {
         InetAddress address = InetAddress.getByName(ipAddress);
+        // 这个函数作用就是将ip地址转换成一个大的整数,
+        // 由startAddress.getAddress()得到ip地址的字节数组, 但是byte值范围是-128~127, 无法存入类似192, 255这种值, 但是byte按无符号解读是可以有192, 255这种值的
+        // 这种BigInteger的构造方式, 就是把byte中的二进制按无符号数解读了, 这样每个byte就可以正确表示ip地址中的值, 再把每个byte连接起来, 形成一个大的整数
         BigInteger start = new BigInteger(1, this.startAddress.getAddress());
         BigInteger end = new BigInteger(1, this.endAddress.getAddress());
         BigInteger target = new BigInteger(1, address.getAddress());
@@ -136,5 +149,9 @@ public class CIDRUtils {
         int te = target.compareTo(end);
 
         return (st == -1 || st == 0) && (te == -1 || te == 0);
+    }
+
+    public static void main(String[] args) throws UnknownHostException {
+        CIDRUtils cidrUtils = new CIDRUtils("192.168.1.0/26");
     }
 }

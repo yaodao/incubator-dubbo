@@ -57,7 +57,8 @@ public class AdaptiveClassCodeGenerator {
     
     private static final String CODE_EXT_NAME_NULL_CHECK = "if(extName == null) "
                     + "throw new IllegalStateException(\"Failed to get extension (%s) name from url (\" + url.toString() + \") use keys(%s)\");\n";
-    
+
+    // getMethodName是Invocation类的一个方法
     private static final String CODE_INVOCATION_ARGUMENT_NULL_CHECK = "if (arg%d == null) throw new IllegalArgumentException(\"invocation == null\"); "
                     + "String methodName = arg%d.getMethodName();\n";
     
@@ -136,6 +137,7 @@ public class AdaptiveClassCodeGenerator {
     
     /**
      * get index of parameter with type URL
+     * 获取URL类型的参数在method中的位置, 没有返回-1
      */
     private int getUrlTypeIndex(Method method) {            
         int urlTypeIndex = -1;
@@ -164,6 +166,11 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate method arguments
      */
+    /**
+     * 生成method的参数的代码, 例如:  "java.lang.String arg0, int arg1"
+     * @param method
+     * @return
+     */
     private String generateMethodArguments(Method method) {
         Class<?>[] pts = method.getParameterTypes();
         return IntStream.range(0, pts.length)
@@ -173,6 +180,11 @@ public class AdaptiveClassCodeGenerator {
     
     /**
      * generate method throws 
+     */
+    /**
+     * 对method的throws生成代码, 例如: 最后生成"throws java.lang.InterruptedException, java.lang.IndexOutOfBoundsException"
+     * @param method
+     * @return
      */
     private String generateMethodThrows(Method method) {
         Class<?>[] ets = method.getExceptionTypes();
@@ -186,6 +198,12 @@ public class AdaptiveClassCodeGenerator {
     
     /**
      * generate method URL argument null check 
+     */
+    /**
+     * 产生一个代码字符串, 功能是
+     * 先检查argi是否为空, 空则抛出异常, 不空则把argi赋值给url变量
+     * @param index
+     * @return
      */
     private String generateUrlNullCheck(int index) {
         return String.format(CODE_URL_NULL_CHECK, index, URL.class.getName(), index);
@@ -213,6 +231,7 @@ public class AdaptiveClassCodeGenerator {
 
             String[] value = getMethodAdaptiveValue(adaptiveAnnotation);
 
+            // method的参数是否有org.apache.dubbo.rpc.Invocation类型
             boolean hasInvocation = hasInvocationArgument(method);
             
             code.append(generateInvocationArgumentNullCheck(method));
@@ -233,12 +252,25 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate code for variable extName null check
      */
+    /**
+     * 生成如下代码:
+     * if(extName == null) throw new IllegalStateException("Failed to get extension (org.apache.dubbo.common.threadpool.ThreadPool) name from url (" + url.toString() + ") use keys([impl1, impl2])");
+     * @param value
+     * @return
+     */
     private String generateExtNameNullCheck(String[] value) {
         return String.format(CODE_EXT_NAME_NULL_CHECK, type.getName(), Arrays.toString(value));
     }
 
     /**
      * generate extName assigment code
+     */
+    /**
+     * 有Invocation时生成的代码例如:      String extName = url.getMethodParameter(methodName, "loadbalance", "random");
+     * 没有Invocation时生成的代码例如:    String extName = url.getParameter("dispatcher", url.getParameter("dispather", url.getParameter("channel.handler", "all")));
+     * @param value
+     * @param hasInvocation
+     * @return
      */
     private String generateExtNameAssignment(String[] value, boolean hasInvocation) {
         // TODO: refactor it
@@ -285,12 +317,22 @@ public class AdaptiveClassCodeGenerator {
     /**
      * @return
      */
+    /**
+     * 生成代码例如: org.apache.dubbo.common.threadpool.ThreadPool extension =(org.apache.dubbo.common.threadpool.ThreadPool)ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.threadpool.ThreadPool.class).getExtension(extName);
+     * @return
+     */
     private String generateExtensionAssignment() {
         return String.format(CODE_EXTENSION_ASSIGNMENT, type.getName(), ExtensionLoader.class.getSimpleName(), type.getName());
     }
 
     /**
      * generate method invocation statement and return it if necessary
+     */
+    /**
+     * method没有返回值时, 生成代码:  extension.fun2(arg0, arg1);
+     * method有返回值时, 生成代码:  return extension.fun2(arg0, arg1);
+     * @param method
+     * @return
      */
     private String generateReturnAndInovation(Method method) {
         String returnStatement = method.getReturnType().equals(void.class) ? "" : "return ";
@@ -311,6 +353,12 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate code to test argument of type <code>Invocation</code> is null
      */
+    /**
+     * 若method有org.apache.dubbo.rpc.Invocation类型的参数, 则生成检验该参数是否为空的代码, 若无则返回空串
+     * 返回代码示例: if (arg1 == null) throw new IllegalArgumentException("invocation == null"); String methodName = arg1.getMethodName();
+     * @param method
+     * @return
+     */
     private String generateInvocationArgumentNullCheck(Method method) {
         Class<?>[] pts = method.getParameterTypes();
         return IntStream.range(0, pts.length).filter(i -> CLASSNAME_INVOCATION.equals(pts[i].getName()))
@@ -321,10 +369,16 @@ public class AdaptiveClassCodeGenerator {
     /**
      * get value of adaptive annotation or if empty return splitted simple name
      */
+    /**
+     * 获取参数adaptiveAnnotation这个注解中的value值, 若没有值, 则返回类似hello.world的串 (假如type所属的类是HelloWorld)
+     * @param adaptiveAnnotation
+     * @return
+     */
     private String[] getMethodAdaptiveValue(Adaptive adaptiveAnnotation) {
         String[] value = adaptiveAnnotation.value();
         // value is not set, use the value generated from class name as the key
         if (value.length == 0) {
+            // 把类名字中的每个单词的首字母小写, 每个单词之间用"."连接
             String splitName = StringUtils.camelToSplitName(type.getSimpleName(), ".");
             value = new String[]{splitName};
         }
@@ -337,6 +391,13 @@ public class AdaptiveClassCodeGenerator {
      * test if parameter has method which returns type <code>URL</code>
      * <p>
      * if not found, throws IllegalStateException
+     */
+    /**
+     * 查看method的参数, 看每个参数所属的类的方法里, 是否有getXXX且返回值类型是URL的方法
+     * 有就返回给url赋值的代码字符串
+     * 没有抛出异常
+     * @param method
+     * @return
      */
     private String generateUrlAssignmentIndirectly(Method method) {
         Class<?>[] pts = method.getParameterTypes();
@@ -366,6 +427,9 @@ public class AdaptiveClassCodeGenerator {
      * 2, test if argi.getXX() returns null
      * 3, assign url with argi.getXX()
      */
+    // 据说这是生成可执行的代码, 代码的作用就是上面列的
+    // 该函数最后生成的字符串是啥, 可以根据上面3条的意思自己写出来
+    // 就是先检查argi是否为空, 再检查argi.getXX()是否为空,  不空则把argi.getXX()赋值给url变量
     private String generateGetUrlNullCheck(int index, Class<?> type, String method) {
         // Null point check
         StringBuilder code = new StringBuilder();

@@ -307,4 +307,8 @@ public class ClassHelper {
         }
         return true;
     }
+
+    public static void main(String[] args) throws ClassNotFoundException {
+        forName("[I");
+    }
 }

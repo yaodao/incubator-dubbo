@@ -98,6 +98,7 @@ public class CollectionUtils {
         if (list.isEmpty()) {
             return map;
         }
+        // 把item用分隔符分成key和value, 若只有key则value为空串
         for (String item : list) {
             int index = item.indexOf(separator);
             if (index == -1) {
@@ -109,6 +110,7 @@ public class CollectionUtils {
         return map;
     }
 
+    // map中的每条key value 转成key,value形式的串存入List (,是separator)
     public static List<String> join(Map<String, String> map, String separator) {
         if (map == null) {
             return null;

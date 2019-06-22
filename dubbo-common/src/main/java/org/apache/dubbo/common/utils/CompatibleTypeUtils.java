@@ -47,6 +47,7 @@ public class CompatibleTypeUtils {
      * </ul>
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
+    // 验证参数value是否是type类型, 并将value转为type类型返回
     public static Object compatibleTypeConvert(Object value, Class<?> type) {
         if (value == null || type == null || type.isAssignableFrom(value.getClass())) {
             return value;
@@ -153,6 +154,7 @@ public class CompatibleTypeUtils {
                 return new HashSet<Object>(collection);
             }
         } else if (value.getClass().isArray() && Collection.class.isAssignableFrom(type)) {
+            // 数组转成list
             Collection collection;
             if (!type.isInterface()) {
                 try {

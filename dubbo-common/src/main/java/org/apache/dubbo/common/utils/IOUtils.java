@@ -47,6 +47,8 @@ public class IOUtils {
      * @return count.
      * @throws IOException
      */
+    // 将参数is中的数据 写入参数os, 一次写BUFFER_SIZE大小的数据
+    // 简单理解说就是将一个文件中的内容写入另一个文件
     public static long write(InputStream is, OutputStream os) throws IOException {
         return write(is, os, BUFFER_SIZE);
     }
@@ -60,11 +62,12 @@ public class IOUtils {
      * @return count.
      * @throws IOException
      */
+    // 将参数is中的数据 写入参数os, 一次写bufferSize大小的数据
     public static long write(InputStream is, OutputStream os, int bufferSize) throws IOException {
         int read;
         long total = 0;
         byte[] buff = new byte[bufferSize];
-        while (is.available() > 0) {
+        while (is.available() > 0) {// 适合读取本地文件
             read = is.read(buff, 0, buff.length);
             if (read > 0) {
                 os.write(buff, 0, read);
@@ -87,6 +90,7 @@ public class IOUtils {
             write(reader, writer);
             return writer.getBuffer().toString();
         } finally {
+            // StringWriter还真是需要关闭
             writer.close();
         }
     }
@@ -115,6 +119,7 @@ public class IOUtils {
      * @return count.
      * @throws IOException
      */
+    // 将参数is中的数据 写入参数os, 一次写bufferSize大小的数据
     public static long write(Reader reader, Writer writer) throws IOException {
         return write(reader, writer, BUFFER_SIZE);
     }
@@ -128,11 +133,13 @@ public class IOUtils {
      * @return count.
      * @throws IOException
      */
+    // 将参数is中的数据 写入参数os, 一次写bufferSize大小的数据
+    // 返回写入的总字符数(注意: 不是字节数)
     public static long write(Reader reader, Writer writer, int bufferSize) throws IOException {
         int read;
         long total = 0;
         char[] buf = new char[BUFFER_SIZE];
-        while ((read = reader.read(buf)) != -1) {
+        while ((read = reader.read(buf)) != -1) {// 适合读取网络文件
             writer.write(buf, 0, read);
             total += read;
         }
@@ -161,6 +168,7 @@ public class IOUtils {
      * @return lines.
      * @throws IOException
      */
+    // 将文件内容读出到数组, 返回内容数组
     public static String[] readLines(InputStream is) throws IOException {
         List<String> lines = new ArrayList<String>();
         BufferedReader reader = new BufferedReader(new InputStreamReader(is));
@@ -182,6 +190,7 @@ public class IOUtils {
      * @param lines lines.
      * @throws IOException
      */
+    // 把lines数组按行写入文件
     public static void writeLines(OutputStream os, String[] lines) throws IOException {
         PrintWriter writer = new PrintWriter(new OutputStreamWriter(os));
         try {
@@ -201,6 +210,7 @@ public class IOUtils {
      * @param lines lines.
      * @throws IOException
      */
+    // 适用于一次性写入所有数据, 再次调用该函数就会将之前写入的数据覆盖掉
     public static void writeLines(File file, String[] lines) throws IOException {
         if (file == null) {
             throw new IOException("File is null.");
@@ -215,6 +225,7 @@ public class IOUtils {
      * @param lines lines.
      * @throws IOException
      */
+    // 适用于分批的追加数据
     public static void appendLines(File file, String[] lines) throws IOException {
         if (file == null) {
             throw new IOException("File is null.");

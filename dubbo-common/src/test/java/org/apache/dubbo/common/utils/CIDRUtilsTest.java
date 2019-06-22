@@ -19,6 +19,7 @@ package org.apache.dubbo.common.utils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigInteger;
 import java.net.UnknownHostException;
 
 /**
@@ -52,5 +53,36 @@ public class CIDRUtilsTest {
 
         Assertions.assertFalse(cidrUtils.isInRange("3EFE:FFFE:0:C107::dd"));
         Assertions.assertFalse(cidrUtils.isInRange("1FFE:FFFE:0:CC00::dd"));
+    }
+
+    @Test
+    public void testAny(){
+        byte[] arr = {-4};
+        BigInteger mask = new BigInteger( 1, arr);
+        mask = mask.not();
+        byte[] temarr = mask.toByteArray();
+//        System.out.println(temarr);
+//        System.out.println(mask);
+    }
+
+    @Test
+    public void testAny2(){
+        byte[] arr = {3};
+        BigInteger mask = new BigInteger(arr);
+        mask = mask.not();
+        byte[] temarr = mask.toByteArray();
+        System.out.println(temarr);
+        System.out.println(mask);
+    }
+
+    @Test
+    public void testAny3(){
+        int a = 252;
+        int b = ~a;
+        System.out.println(b);
+
+        int aa = 4;
+        int bb = ~aa;
+        System.out.println(bb);
     }
 }

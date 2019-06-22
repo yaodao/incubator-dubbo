@@ -37,6 +37,7 @@ import java.util.regex.Pattern;
 public class ConfigUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(ConfigUtils.class);
+    // 匹配  ${abc}   或者   $abc  或者   ${a.b.c}
     private static Pattern VARIABLE_PATTERN = Pattern.compile(
             "\\$\\s*\\{?\\s*([\\._0-9a-zA-Z]+)\\s*\\}?");
     private static volatile Properties PROPERTIES;
@@ -49,6 +50,7 @@ public class ConfigUtils {
         return !isEmpty(value);
     }
 
+    // 参数value是 "false","0","null","N/A",空串时 都返回true
     public static boolean isEmpty(String value) {
         return StringUtils.isEmpty(value)
                 || "false".equalsIgnoreCase(value)
@@ -75,10 +77,13 @@ public class ConfigUtils {
      * @param def  Default extension list
      * @return result extension list
      */
+    // 示例: ConfigUtils.mergeValues(ThreadPool.class, "aaa,bbb,default.custom",asList("fixed","default.limited", "cached"));
+    // 整个函数实现的效果可以参考自测
     public static List<String> mergeValues(Class<?> type, String cfg, List<String> def) {
         List<String> defaults = new ArrayList<String>();
         if (def != null) {
             for (String name : def) {
+                // 这里细看过
                 if (ExtensionLoader.getExtensionLoader(type).hasExtension(name)) {
                     defaults.add(name);
                 }
@@ -119,6 +124,7 @@ public class ConfigUtils {
         return names;
     }
 
+    // 将参数expression中形如${}的字符串替换成值
     public static String replaceProperty(String expression, Map<String, String> params) {
         if (expression == null || expression.length() == 0 || expression.indexOf('$') < 0) {
             return expression;
@@ -126,6 +132,7 @@ public class ConfigUtils {
         Matcher matcher = VARIABLE_PATTERN.matcher(expression);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
+            // key是要替换的值, value是替换成的值
             String key = matcher.group(1);
             String value = System.getProperty(key);
             if (value == null && params != null) {
@@ -200,6 +207,7 @@ public class ConfigUtils {
         return loadProperties(fileName, false, false);
     }
 
+    // 加载fileName文件的内容到Properties对象, allowMultiFile, true可读取多个文件 false 只能读取一个文件
     public static Properties loadProperties(String fileName, boolean allowMultiFile) {
         return loadProperties(fileName, allowMultiFile, false);
     }
@@ -216,9 +224,12 @@ public class ConfigUtils {
      * </ul>
      * @throws IllegalStateException not allow multi-file, but multi-file exist on class path.
      */
+    // 这个函数功能就是加载fileName文件的内容到Properties对象,
+    // 参数allowMultiFile, true可读取多个文件 false 不能读多个文件, optional 是否记日志
     public static Properties loadProperties(String fileName, boolean allowMultiFile, boolean optional) {
         Properties properties = new Properties();
         // add scene judgement in windows environment Fix 2557
+        // 看上面这行注解, 这里fileName取的应该是windows下的绝对路径
         if (checkFileNameExist(fileName)) {
             try {
                 FileInputStream input = new FileInputStream(fileName);
@@ -235,6 +246,7 @@ public class ConfigUtils {
 
         List<java.net.URL> list = new ArrayList<java.net.URL>();
         try {
+            // 在classpath下查询指定的文件
             Enumeration<java.net.URL> urls = ClassHelper.getClassLoader().getResources(fileName);
             list = new ArrayList<java.net.URL>();
             while (urls.hasMoreElements()) {
@@ -251,6 +263,7 @@ public class ConfigUtils {
             return properties;
         }
 
+        // 读取单个文件的内容到properties
         if (!allowMultiFile) {
             if (list.size() > 1) {
                 String errMsg = String.format("only 1 %s file is expected, but %d dubbo.properties files found on class path: %s",
@@ -270,6 +283,7 @@ public class ConfigUtils {
 
         logger.info("load " + fileName + " properties file from " + list);
 
+        // 读取多个文件的内容到properties
         for (java.net.URL url : list) {
             try {
                 Properties p = new Properties();
@@ -304,7 +318,10 @@ public class ConfigUtils {
         return file.exists();
     }
 
-
+    /**
+     * 获取当前进程的PID
+     * @return
+     */
     public static int getPid() {
         if (PID < 0) {
             try {

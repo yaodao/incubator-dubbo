@@ -35,6 +35,7 @@ public class AtomicPositiveInteger extends Number {
         indexUpdater.set(this, initialValue);
     }
 
+    // & Integer.MAX_VALUE 作用是对负数去掉符号位转为正数
     public final int getAndIncrement() {
         return indexUpdater.getAndIncrement(this) & Integer.MAX_VALUE;
     }

@@ -53,6 +53,7 @@ import static org.springframework.util.StringUtils.trimWhitespace;
  */
 public class AnnotationUtils {
 
+    // 从@Service注解中得到接口名, 或者从参数defaultInterfaceClass得到接口名, 都不行则抛出异常.
     public static String resolveInterfaceName(Service service, Class<?> defaultInterfaceClass)
             throws IllegalStateException {
 
@@ -73,6 +74,7 @@ public class AnnotationUtils {
 
     }
 
+    // 从@Reference注解中得到接口名, 或者从参数defaultInterfaceClass得到接口名, 都不行则g抛出异常.
     public static String resolveInterfaceName(Reference reference, Class<?> defaultInterfaceClass)
             throws IllegalStateException {
 
