@@ -44,6 +44,9 @@ public final class StringUtils {
     public static final String[] EMPTY_STRING_ARRAY = new String[0];
 
     private static final Logger logger = LoggerFactory.getLogger(StringUtils.class);
+
+    // 分两部分, key以下划线或句号或字符或数字开头, 后面跟0个或多个字符, value是0或多个任意字符
+    // 该正则匹配key=value形式的串, 等号必须有
     private static final Pattern KVP_PATTERN = Pattern.compile("([_.a-zA-Z0-9][-_.a-zA-Z0-9]*)[=](.*)"); //key value pair pattern.
     private static final Pattern INT_PATTERN = Pattern.compile("^\\d+$");
     private static final int PAD_LIMIT = 8192;
@@ -696,6 +699,7 @@ public final class StringUtils {
      * @param itemSeparator item separator.
      * @return key-value map;
      */
+    // 把str中的key=value解析出来放到map中
     private static Map<String, String> parseKeyValuePair(String str, String itemSeparator) {
         String[] tmp = str.split(itemSeparator);
         Map<String, String> map = new HashMap<String, String>(tmp.length);
@@ -720,6 +724,7 @@ public final class StringUtils {
      * @param qs query string.
      * @return Parameters instance.
      */
+    // 将qs中的 "version=1.0.0&group=test&dubbo.version=2.0.0" 分解成map, key是参数名 value是参数值
     public static Map<String, String> parseQueryString(String qs) {
         if (isEmpty(qs)) {
             return new HashMap<String, String>();
@@ -741,6 +746,7 @@ public final class StringUtils {
         return buf.toString();
     }
 
+    // 将map中的key value值, 构造成"key1=value1&key2=value2"的字符串
     public static String toQueryString(Map<String, String> ps) {
         StringBuilder buf = new StringBuilder();
         if (ps != null && ps.size() > 0) {

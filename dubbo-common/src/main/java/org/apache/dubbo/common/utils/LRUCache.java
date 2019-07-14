@@ -40,6 +40,7 @@ public class LRUCache<K, V> extends LinkedHashMap<K, V> {
     }
 
     @Override
+    // 父类的函数默认返回false, 这里覆盖后就可以按自己的定义的大小来决定是否移除元素 (从而达到LRU的效果)
     protected boolean removeEldestEntry(java.util.Map.Entry<K, V> eldest) {
         return size() > maxCapacity;
     }
