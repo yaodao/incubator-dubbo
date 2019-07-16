@@ -47,14 +47,18 @@ public class NetUtils {
     private static final int RND_PORT_START = 30000;
     private static final int RND_PORT_RANGE = 10000;
 
-    // valid port range is (0, 65535]
+    // valid port range is (0, 65535] 这个是传输层的有效端口范围(tcp udp)
     private static final int MIN_PORT = 0;
     private static final int MAX_PORT = 65535;
 
+    // ipv4地址+端口号 (端口号是1-5位)
     private static final Pattern ADDRESS_PATTERN = Pattern.compile("^\\d{1,3}(\\.\\d{1,3}){3}\\:\\d{1,5}$");
+    // 127开头的地址
     private static final Pattern LOCAL_IP_PATTERN = Pattern.compile("127(\\.\\d{1,3}){3}$");
+    // 最多匹配6段用.分开的数字, 最少匹配4段用.分开的数字
     private static final Pattern IP_PATTERN = Pattern.compile("\\d{1,3}(\\.\\d{1,3}){3,5}$");
 
+    // key是ip地址, value是hostname
     private static final Map<String, String> hostNameCache = new LRUCache<>(1000);
     private static volatile InetAddress LOCAL_ADDRESS = null;
 
@@ -74,6 +78,7 @@ public class NetUtils {
         }
     }
 
+    // 在参数 [port, MAX_PORT) 之间选一个有效的接口
     public static int getAvailablePort(int port) {
         if (port <= 0) {
             return getAvailablePort();
@@ -96,8 +101,10 @@ public class NetUtils {
         return ADDRESS_PATTERN.matcher(address).matches();
     }
 
+    // 参数host是否是127开头的串, 或者是"localhost"
     public static boolean isLocalHost(String host) {
         return host != null
+                // matches()需要host全部匹配pattern
                 && (LOCAL_IP_PATTERN.matcher(host).matches()
                 || host.equalsIgnoreCase(Constants.LOCALHOST_KEY));
     }
@@ -125,6 +132,7 @@ public class NetUtils {
                 new InetSocketAddress(port) : new InetSocketAddress(host, port);
     }
 
+    // 参数ipv4地址是否有效
     static boolean isValidV4Address(InetAddress address) {
         String name = address.getHostAddress();
         return (name != null
@@ -139,12 +147,14 @@ public class NetUtils {
      * @param address the given address
      * @return true if it is reachable
      */
+    // 判断ipv6地址是否可达
     static boolean isValidV6Address(Inet6Address address) {
         boolean preferIpv6 = Boolean.getBoolean("java.net.preferIPv6Addresses");
         if (!preferIpv6) {
             return false;
         }
         try {
+            // 判定节点是否可达, 注意指定时间内没有响应, 也被认为不可达
             return address.isReachable(100);
         } catch (IOException e) {
             // ignore
@@ -152,7 +162,9 @@ public class NetUtils {
         return false;
     }
 
+    // 判断参数地址是不是外网ip, true是外网ip
     static boolean isValidPublicAddress(InetAddress address) {
+        // isSiteLocalAddress判断address是否是内网ip, isLoopbackAddress判断address是否以127开头的ip
         return !address.isSiteLocalAddress() && !address.isLoopbackAddress();
     }
 
@@ -234,6 +246,7 @@ public class NetUtils {
         return localAddress;
     }
 
+    // 验证参数address是否是有效的ip地址
     private static Optional<InetAddress> toValidAddress(InetAddress address) {
         if (isValidPublicAddress(address)) {
             if (address instanceof Inet6Address) {
@@ -249,9 +262,11 @@ public class NetUtils {
         return Optional.empty();
     }
 
+    // 获取本机的ip地址 (ipv4/ipv6)
     private static InetAddress getLocalAddress0() {
         InetAddress localAddress = null;
         try {
+            // 先使用DNS, 从hostname获取ip地址
             localAddress = InetAddress.getLocalHost();
             Optional<InetAddress> addressOp = toValidAddress(localAddress);
             if (addressOp.isPresent()) {
@@ -262,6 +277,7 @@ public class NetUtils {
         }
 
         try {
+            // 再获取本机的所有网卡信息, 从中过滤一条ip地址
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             if (null == interfaces) {
                 return localAddress;
@@ -290,10 +306,16 @@ public class NetUtils {
         return localAddress;
     }
 
+    /**
+     * 从ip地址串得到hostname, 若跟hostNameCache存的不同则更新hostNameCache中的值
+     * @param address ip地址串
+     * @return
+     */
     public static String getHostName(String address) {
         try {
             int i = address.indexOf(':');
             if (i > -1) {
+                // 去掉端口号
                 address = address.substring(0, i);
             }
             String hostname = hostNameCache.get(address);
@@ -316,6 +338,7 @@ public class NetUtils {
      * @param hostName
      * @return ip address or hostName if UnknownHostException
      */
+    // 通过hostname得到对应的ip
     public static String getIpByHost(String hostName) {
         try {
             return InetAddress.getByName(hostName).getHostAddress();
@@ -324,24 +347,29 @@ public class NetUtils {
         }
     }
 
+    // 得到字符串 "ip:port"
     public static String toAddressString(InetSocketAddress address) {
         return address.getAddress().getHostAddress() + ":" + address.getPort();
     }
 
+    // 构造一个InetSocketAddress对象--含有ip和端口
     public static InetSocketAddress toAddress(String address) {
         int i = address.indexOf(':');
         String host;
         int port;
         if (i > -1) {
+            // 分解成ip和端口
             host = address.substring(0, i);
             port = Integer.parseInt(address.substring(i + 1));
         } else {
             host = address;
             port = 0;
         }
+        // InetSocketAddress在BIO常用的例子里就有, 就是一个由地址和端口做参数构造的对象
         return new InetSocketAddress(host, port);
     }
 
+    // 得到字符串 "protocol://host:port/path"
     public static String toURL(String protocol, String host, int port, String path) {
         StringBuilder sb = new StringBuilder();
         sb.append(protocol).append("://");
@@ -383,9 +411,11 @@ public class NetUtils {
         }
     }
 
+    // 判断host是否在pattern范围内(就是ip地址是否在patter的地址范围, host可以是域名可以是ip地址, 在函数内部会把域名转为ip地址)
     public static boolean matchIpExpression(String pattern, String host, int port) throws UnknownHostException {
 
         // if the pattern is subnet format, it will not be allowed to config port param in pattern.
+        // 若参数pattern是cider地址, 则判断host是否在cider的地址范围内
         if (pattern.contains("/")) {
             CIDRUtils utils = new CIDRUtils(pattern);
             return utils.isInRange(host);
@@ -396,8 +426,9 @@ public class NetUtils {
     }
 
     /**
-     * @param pattern
-     * @param host
+     * 查看参数host(ip地址)是否在pattern指定的范围内
+     * @param pattern 一个ip地址范围, 例如: "192.168.1.1-63" , "234e:0:4567:0:0:0:3d:0-ee"
+     * @param host 要查看的ip地址
      * @param port
      * @return
      * @throws UnknownHostException
@@ -407,6 +438,7 @@ public class NetUtils {
             throw new IllegalArgumentException("Illegal Argument pattern or hostName. Pattern:" + pattern + ", Host:" + host);
         }
         pattern = pattern.trim();
+        // 这里定义pattern="*.*.*.*" 可以表示所有的地址范围
         if (pattern.equals("*.*.*.*") || pattern.equals("*")) {
             return true;
         }
@@ -414,6 +446,7 @@ public class NetUtils {
         InetAddress inetAddress = InetAddress.getByName(host);
         boolean isIpv4 = isValidV4Address(inetAddress) ? true : false;
         String[] hostAndPort = getPatternHostAndPort(pattern, isIpv4);
+        // 如果pattern里面有port, 就比较下port是否相同, 不同直接返回false, 没有就不比较
         if (hostAndPort[1] != null && !hostAndPort[1].equals(String.valueOf(port))) {
             return false;
         }
@@ -423,17 +456,20 @@ public class NetUtils {
         if (!isIpv4) {
             splitCharacter = SPLIT_IPV6_CHARECTER;
         }
+        // pattern分成数组
         String[] mask = pattern.split(splitCharacter);
         //check format of pattern
         checkHostPattern(pattern, mask, isIpv4);
 
+        // 得到ip地址
         host = inetAddress.getHostAddress();
-
+        // ip地址分成数组
         String[] ip_address = host.split(splitCharacter);
         if (pattern.equals(host)) {
             return true;
         }
         // short name condition
+        // pattern是固定的某个地址, 而不是一个地址范围
         if (!ipPatternContainExpression(pattern)) {
             InetAddress patternAddress = InetAddress.getByName(pattern);
             if (patternAddress.getHostAddress().equals(host)) {
@@ -442,6 +478,7 @@ public class NetUtils {
                 return false;
             }
         }
+        // 挨个元素的比较pattern和host, 看host是否在pattern内
         for (int i = 0; i < mask.length; i++) {
             if (mask[i].equals("*") || mask[i].equals(ip_address[i])) {
                 continue;
@@ -484,6 +521,7 @@ public class NetUtils {
         }
     }
 
+    // 获取IP地址的pattern 和端口号 其中, ip地址的pattern类似 "192.168.1.63-65:90" 或者 "[234e:0:4567:0:0:0:3d:0-ee]:8090"
     private static String[] getPatternHostAndPort(String pattern, boolean isIpv4) {
         String[] result = new String[2];
         if (pattern.startsWith("[") && pattern.contains("]:")) {
@@ -506,10 +544,12 @@ public class NetUtils {
         }
     }
 
+    // 将ip地址的单个部分解析成整数
     private static Integer getNumOfIpSegment(String ipSegment, boolean isIpv4) {
         if (isIpv4) {
             return Integer.parseInt(ipSegment);
         }
+        // ipSegment是16进制表示, 将ipSegment解析成一个十进制整数
         return Integer.parseInt(ipSegment, 16);
     }
 

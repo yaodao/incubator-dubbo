@@ -50,6 +50,7 @@ public class CIDRUtils {
         /* split CIDR to address and prefix part */
         if (this.cidr.contains("/")) {
             int index = this.cidr.indexOf("/");
+            // 分成单个ip地址和网络号占用的位数
             String addressPart = this.cidr.substring(0, index);
             String networkPart = this.cidr.substring(index + 1);
 
@@ -91,6 +92,7 @@ public class CIDRUtils {
         byte[] startIpArr = toBytes(startIp.toByteArray(), targetSize);
         byte[] endIpArr = toBytes(endIp.toByteArray(), targetSize);
 
+        // 成员变量cidr对应的起始地址和结束地址
         this.startAddress = InetAddress.getByAddress(startIpArr);
         this.endAddress = InetAddress.getByAddress(endIpArr);
 

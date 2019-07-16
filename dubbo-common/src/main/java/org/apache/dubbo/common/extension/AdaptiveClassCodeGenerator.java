@@ -62,7 +62,7 @@ public class AdaptiveClassCodeGenerator {
     private static final String CODE_INVOCATION_ARGUMENT_NULL_CHECK = "if (arg%d == null) throw new IllegalArgumentException(\"invocation == null\"); "
                     + "String methodName = arg%d.getMethodName();\n";
     
-    
+
     private static final String CODE_EXTENSION_ASSIGNMENT = "%s extension = (%<s)%s.getExtensionLoader(%s.class).getExtension(extName);\n";
     
     private final Class<?> type;
@@ -77,6 +77,7 @@ public class AdaptiveClassCodeGenerator {
     /**
      * test if given type has at least one method annotated with <code>SPI</code>
      */
+    // type是否有带@Adaptive注解的方法, true 有
     private boolean hasAdaptiveMethod() {
         return Arrays.stream(type.getMethods()).anyMatch(m -> m.isAnnotationPresent(Adaptive.class));
     }
@@ -84,8 +85,10 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate and return class code
      */
+    // 生成一个类的字符串
     public String generate() {
         // no need to generate adaptive class since there's no adaptive method found.
+        // 需要有@Adaptive标注的方法
         if (!hasAdaptiveMethod()) {
             throw new IllegalStateException("No adaptive method exist on extension " + type.getName() + ", refuse to create the adaptive class!");
         }
@@ -110,6 +113,7 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate package info
      */
+    // 返回字符串 "package com.its.dev55;\n"
     private String generatePackageInfo() {
         return String.format(CODE_PACKAGE, type.getPackage().getName());
     }
@@ -117,6 +121,7 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate imports
      */
+    // 返回字符串 "import org.apache.dubbo.common.extension.ExtensionLoader;\n"
     private String generateImports() {
         return String.format(CODE_IMPORTS, ExtensionLoader.class.getName());
     }
@@ -124,21 +129,25 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate class declaration
      */
+    // 返回字符串 "public class %s$Adaptive implements %s {\n"
     private String generateClassDeclaration() {
+        // getSimpleName()只返回类名, getCanonicalName返回类全名 (是可读性更好的字符串)
         return String.format(CODE_CLASS_DECLARATION, type.getSimpleName(), type.getCanonicalName());
     }
     
     /**
      * generate method not annotated with Adaptive with throwing unsupported exception 
      */
+    // 返回字符串 "throw new UnsupportedOperationException(\"The method %s of interface %s is not adaptive method!\");\n"
     private String generateUnsupported(Method method) {
+        // method的字符串 "public static void com.its.dev55.Test15.fun(java.util.Map)"
         return String.format(CODE_UNSUPPORTED, method, type.getName());
     }
     
     /**
      * get index of parameter with type URL
-     * 获取URL类型的参数在method中的位置, 没有返回-1
      */
+    // 获取URL类型的参数在method的所有参数中的位置, 没有返回-1
     private int getUrlTypeIndex(Method method) {            
         int urlTypeIndex = -1;
         Class<?>[] pts = method.getParameterTypes();
@@ -154,6 +163,7 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate method declaration
      */
+    // 返回一个函数字符串(包括返回值, 函数名, 参数, 函数体)
     private String generateMethod(Method method) {
         String methodReturnType = method.getReturnType().getCanonicalName();
         String methodName = method.getName();
@@ -167,7 +177,8 @@ public class AdaptiveClassCodeGenerator {
      * generate method arguments
      */
     /**
-     * 生成method的参数的代码, 例如:  "java.lang.String arg0, int arg1"
+     * 对method对象的参数生成字符串, 例如函数形如: public void fun(String name, int age)
+     * 返回的字符串为 "java.lang.String arg0, int arg1"
      * @param method
      * @return
      */
@@ -182,7 +193,8 @@ public class AdaptiveClassCodeGenerator {
      * generate method throws 
      */
     /**
-     * 对method的throws生成代码, 例如: 最后生成"throws java.lang.InterruptedException, java.lang.IndexOutOfBoundsException"
+     * 对函数签名后面的throws生成字符串, 例如函数签名为 public void fun() throws InterruptedException, IndexOutOfBoundsException
+     * 则最后生成字符串为 "throws java.lang.InterruptedException, java.lang.IndexOutOfBoundsException"
      * @param method
      * @return
      */
@@ -200,10 +212,12 @@ public class AdaptiveClassCodeGenerator {
      * generate method URL argument null check 
      */
     /**
-     * 产生一个代码字符串, 功能是
-     * 先检查argi是否为空, 空则抛出异常, 不空则把argi赋值给url变量
-     * @param index
-     * @return
+     * 返回一个字符串, 如下:
+     *  if (arg%d == null)
+     *      throw new IllegalArgumentException(\"url == null\");
+     *  org.apache.dubbo.common.URL url = arg%d;
+     *
+     *  其中%d 值是 参数index
      */
     private String generateUrlNullCheck(int index) {
         return String.format(CODE_URL_NULL_CHECK, index, URL.class.getName(), index);
@@ -216,8 +230,10 @@ public class AdaptiveClassCodeGenerator {
         Adaptive adaptiveAnnotation = method.getAnnotation(Adaptive.class);
         StringBuilder code = new StringBuilder(512);
         if (adaptiveAnnotation == null) {
+            // 方法上没有@Adaptive注解, 返回一个字符串(内容是"throws new ***Exception()")
             return generateUnsupported(method);
         } else {
+            // 获取URL类型的参数在method的所有参数中的位置, 没有返回-1
             int urlTypeIndex = getUrlTypeIndex(method);
             
             // found parameter in URL type
@@ -231,7 +247,7 @@ public class AdaptiveClassCodeGenerator {
 
             String[] value = getMethodAdaptiveValue(adaptiveAnnotation);
 
-            // method的参数是否有org.apache.dubbo.rpc.Invocation类型
+            // method是否含有org.apache.dubbo.rpc.Invocation类型的参数
             boolean hasInvocation = hasInvocationArgument(method);
             
             code.append(generateInvocationArgumentNullCheck(method));
@@ -254,7 +270,8 @@ public class AdaptiveClassCodeGenerator {
      */
     /**
      * 生成如下代码:
-     * if(extName == null) throw new IllegalStateException("Failed to get extension (org.apache.dubbo.common.threadpool.ThreadPool) name from url (" + url.toString() + ") use keys([impl1, impl2])");
+     * if(extName == null)
+     *      throw new IllegalStateException("Failed to get extension (org.apache.dubbo.common.threadpool.ThreadPool) name from url (" + url.toString() + ") use keys([impl1, impl2])");
      * @param value
      * @return
      */
@@ -272,6 +289,8 @@ public class AdaptiveClassCodeGenerator {
      * @param hasInvocation
      * @return
      */
+
+    // value数组是Adaptive注解的value值, hasInvocation表示调用处的method有Invocation类型的参数
     private String generateExtNameAssignment(String[] value, boolean hasInvocation) {
         // TODO: refactor it
         String getNameCode = null;
@@ -318,7 +337,8 @@ public class AdaptiveClassCodeGenerator {
      * @return
      */
     /**
-     * 生成代码例如: org.apache.dubbo.common.threadpool.ThreadPool extension =(org.apache.dubbo.common.threadpool.ThreadPool)ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.threadpool.ThreadPool.class).getExtension(extName);
+     * 生成代码例如:
+     * org.apache.dubbo.common.threadpool.ThreadPool extension =(org.apache.dubbo.common.threadpool.ThreadPool)ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.threadpool.ThreadPool.class).getExtension(extName);
      * @return
      */
     private String generateExtensionAssignment() {
@@ -345,6 +365,7 @@ public class AdaptiveClassCodeGenerator {
     /**
      * test if method has argument of type <code>Invocation</code>
      */
+    // method的参数中, 是否有org.apache.dubbo.rpc.Invocation类型的参数, true 有
     private boolean hasInvocationArgument(Method method) {
         Class<?>[] pts = method.getParameterTypes();
         return Arrays.stream(pts).anyMatch(p -> CLASSNAME_INVOCATION.equals(p.getName()));
@@ -354,10 +375,14 @@ public class AdaptiveClassCodeGenerator {
      * generate code to test argument of type <code>Invocation</code> is null
      */
     /**
-     * 若method有org.apache.dubbo.rpc.Invocation类型的参数, 则生成检验该参数是否为空的代码, 若无则返回空串
-     * 返回代码示例: if (arg1 == null) throw new IllegalArgumentException("invocation == null"); String methodName = arg1.getMethodName();
-     * @param method
-     * @return
+     * 若method有org.apache.dubbo.rpc.Invocation类型的参数, 则生成检验该Invocation类型的参数是否为空的代码, 若无则返回空串
+     *
+     * 返回字符串如下:
+     * if (argi == null)
+     *    throw new IllegalArgumentException("invocation == null");
+     * String methodName = argi.getMethodName();
+     *
+     * 返回非空串时, 表示argi是Invocation类型的对象, 这点从异常信息也可以看出
      */
     private String generateInvocationArgumentNullCheck(Method method) {
         Class<?>[] pts = method.getParameterTypes();
@@ -394,15 +419,14 @@ public class AdaptiveClassCodeGenerator {
      */
     /**
      * 查看method的参数, 看每个参数所属的类的方法里, 是否有getXXX且返回值类型是URL的方法
-     * 有就返回给url赋值的代码字符串
+     * 有就返回一个字符串 (字符串表示了一段代码, 给url赋值的代码)
      * 没有抛出异常
-     * @param method
-     * @return
      */
     private String generateUrlAssignmentIndirectly(Method method) {
+        // 该method的所有参数的clazz
         Class<?>[] pts = method.getParameterTypes();
         
-        // find URL getter method
+        // 对每个参数的clazz, 查看该clazz下的方法, 看是否有名字为getXXX且返回值类型是URL的方法
         for (int i = 0; i < pts.length; ++i) {
             for (Method m : pts[i].getMethods()) {
                 String name = m.getName();
@@ -411,6 +435,7 @@ public class AdaptiveClassCodeGenerator {
                         && !Modifier.isStatic(m.getModifiers())
                         && m.getParameterTypes().length == 0
                         && m.getReturnType() == URL.class) {
+                    // i是method的第i个参数, pts[i]是第i个参数的clazz对象, name是第i个参数所属类型内的某个方法名
                     return generateGetUrlNullCheck(i, pts[i], name);
                 }
             }
@@ -426,10 +451,19 @@ public class AdaptiveClassCodeGenerator {
      * 1, test if argi is null
      * 2, test if argi.getXX() returns null
      * 3, assign url with argi.getXX()
+     * 该函数最后生成的字符串, 可以根据上面3条的意思自己写出来
+     * 就是先检查argi是否为空, 再检查argi.getXX()是否为空,  不空则把argi.getXX()赋值给url变量
      */
-    // 据说这是生成可执行的代码, 代码的作用就是上面列的
-    // 该函数最后生成的字符串是啥, 可以根据上面3条的意思自己写出来
-    // 就是先检查argi是否为空, 再检查argi.getXX()是否为空,  不空则把argi.getXX()赋值给url变量
+
+    /**
+     * 返回的字符串如下:
+     *  if (argi == null)
+     *      throw new IllegalArgumentException(\"%s argument == null\");
+     *  if (argi.getXX() == null)
+     *      throw new IllegalArgumentException(\"%s argument getXX() == null\");
+     *  org.apache.dubbo.common.URL url = argi.getXX();
+     */
+    // 这里传入的参数是什么意思, 参见调用处
     private String generateGetUrlNullCheck(int index, Class<?> type, String method) {
         // Null point check
         StringBuilder code = new StringBuilder();

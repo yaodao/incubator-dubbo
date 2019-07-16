@@ -153,8 +153,9 @@ public class CompatibleTypeUtils {
             } else if (type == Set.class) {
                 return new HashSet<Object>(collection);
             }
-        } else if (value.getClass().isArray() && Collection.class.isAssignableFrom(type)) {
-            // 数组转成list
+        } // 当value是数组, 而type不是集合类的子类, 则进不去这段代码
+        else if (value.getClass().isArray() && Collection.class.isAssignableFrom(type)) {
+            // 数组填充到list
             Collection collection;
             if (!type.isInterface()) {
                 try {

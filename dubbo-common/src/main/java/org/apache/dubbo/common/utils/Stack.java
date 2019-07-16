@@ -25,9 +25,10 @@ import java.util.List;
  */
 
 public class Stack<E> {
-    // 实际元素的个数
+    // 实际含有的元素个数
     private int mSize = 0;
 
+    // 使用list当数组用 (下面的push/pop等操作都是按下标来进行的)
     private List<E> mElements = new ArrayList<E>();
 
     public Stack() {
@@ -44,6 +45,7 @@ public class Stack<E> {
         } else {
             mElements.add(ele);
         }
+        // 每次push进来一个元素, 才将mSize++, 也就是mSize的值指向下一个将要插入元素的位置(即 mSize指向空位置)
         mSize++;
     }
 

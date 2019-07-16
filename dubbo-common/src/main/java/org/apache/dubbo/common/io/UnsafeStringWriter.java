@@ -23,6 +23,7 @@ import java.io.Writer;
  * Thread-unsafe StringWriter.
  */
 public class UnsafeStringWriter extends Writer {
+    // 后面的提供的操作就是将字符写到这个mBuffer中
     private StringBuilder mBuffer;
 
     public UnsafeStringWriter() {

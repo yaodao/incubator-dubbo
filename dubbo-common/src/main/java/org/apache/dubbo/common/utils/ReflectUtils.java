@@ -28,6 +28,7 @@ import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
@@ -125,7 +126,9 @@ public final class ReflectUtils {
     private ReflectUtils() {
     }
 
-    // 判断cls是否是基本类型，String，Nubmer类型及其子类，Date类型及其子类 的类类型对象。
+    // 判断cls是否是基本类型，String类，Boolean类, Character类, Nubmer类型及其子类，Date类型及其子类, 或者是这些类型的数组
+    // true 是以上类型, false 不是
+    // cls是String数组时, 返回true
     public static boolean isPrimitives(Class<?> cls) {
         if (cls.isArray()) {
             return isPrimitive(cls.getComponentType());
@@ -133,12 +136,14 @@ public final class ReflectUtils {
         return isPrimitive(cls);
     }
 
-    // 判断cls是否是基本类型，String，Nubmer类型及其子类，Date类型及其子类 的类类型对象。
+    // 判断cls是否是基本类型，String，Nubmer类型及其子类，Date类型及其子类。
     public static boolean isPrimitive(Class<?> cls) {
+        // 包装类isPrimitive返回false
         return cls.isPrimitive() || cls == String.class || cls == Boolean.class || cls == Character.class
                 || Number.class.isAssignableFrom(cls) || Date.class.isAssignableFrom(cls);
     }
 
+    // 返回8个基本类型的包装类型
     public static Class<?> getBoxedClass(Class<?> c) {
         if (c == int.class) {
             c = Integer.class;
@@ -167,6 +172,7 @@ public final class ReflectUtils {
      * @param o instance.
      * @return compatible or not.
      */
+    // true, c是o的父类或接口或者两者是同一个类 (简单说就是: o是否可以强转成c, 可以true, 不能false)
     public static boolean isCompatible(Class<?> c, Object o) {
         boolean pt = c.isPrimitive();
         if (o == null) {
@@ -177,6 +183,7 @@ public final class ReflectUtils {
             c = getBoxedClass(c);
         }
 
+        // c是否为o的父类或接口或两者相同
         return c == o.getClass() || c.isInstance(o);
     }
 
@@ -187,6 +194,7 @@ public final class ReflectUtils {
      * @param os object array.
      * @return compatible or not.
      */
+    // 批量判断 os是否可以转成cs (两者兼容)
     public static boolean isCompatible(Class<?>[] cs, Object[] os) {
         int len = cs.length;
         if (len != os.length) {
@@ -229,6 +237,8 @@ public final class ReflectUtils {
      * @param c class.
      * @return name.
      */
+    // 返回字符串: 普通类返回 "类全称",  数组返回 "类全称[]"
+    // 例如: String[][] arr = new String[2][2]; getName(arr.getClass());  返回 "java.lang.String[][]"
     public static String getName(Class<?> c) {
         if (c.isArray()) {
             StringBuilder sb = new StringBuilder();
@@ -247,15 +257,23 @@ public final class ReflectUtils {
         return getGenericClass(cls, 0);
     }
 
+    // 得到cls实现的第一个父接口的第i个参数的具体类型 (因为接口中一般都有泛型, 这里取的是子类实现接口后, 接口中泛型的实际类型)
     public static Class<?> getGenericClass(Class<?> cls, int i) {
         try {
+            // 获取代表第一个父接口的ParameterizedType对象
             ParameterizedType parameterizedType = ((ParameterizedType) cls.getGenericInterfaces()[0]);
+            // 获取代表第i个参数的Type对象
             Object genericClass = parameterizedType.getActualTypeArguments()[i];
             if (genericClass instanceof ParameterizedType) { // handle nested generic type
+                // 当Type对象是代表泛型类型的参数时 (处理多级泛型)
                 return (Class<?>) ((ParameterizedType) genericClass).getRawType();
             } else if (genericClass instanceof GenericArrayType) { // handle array generic type
+                Type tem = ((GenericArrayType) genericClass).getGenericComponentType();
+                // 这里的返回值强转成Class应该写错了, 进这个if 表示genericClass是泛型的数组,
+                // 数组元素可以是带泛型的类型和普通类型, 这里是泛型类型元素的时候会抛出异常, 普通类型又进不来这个if, 普通元素数组由下面的if处理
                 return (Class<?>) ((GenericArrayType) genericClass).getGenericComponentType();
             } else if (((Class) genericClass).isArray()) {
+                // 当Type对象是代表数组类型的参数时
                 // Requires JDK 7 or higher, Foo<int[]> is no longer GenericArrayType
                 return ((Class) genericClass).getComponentType();
             } else {
@@ -274,6 +292,9 @@ public final class ReflectUtils {
      * @param m method.
      * @return name.
      */
+    // 返回方法名,
+    // 例如: public <T> T myfun(String tem, Integer[] param){ return null;} 这种方法
+    // 返回字符串是 "java.lang.Object myfun(java.lang.String,java.lang.Integer[])"
     public static String getName(final Method m) {
         StringBuilder ret = new StringBuilder();
         ret.append(getName(m.getReturnType())).append(' ');
@@ -289,6 +310,7 @@ public final class ReflectUtils {
         return ret.toString();
     }
 
+    // 返回字符串 "myfun(java.lang.String,java.lang.Integer)", 其中"myfun"是参数methodName
     public static String getSignature(String methodName, Class<?>[] parameterTypes) {
         StringBuilder sb = new StringBuilder(methodName);
         sb.append("(");
@@ -314,6 +336,8 @@ public final class ReflectUtils {
      * @param c constructor.
      * @return name.
      */
+    // 返回由构造函数的参数组成的字符串
+    // 例如: 构造函数 fun(String p1, int p2)  返回串为 "(java.lang.String,int)"
     public static String getName(final Constructor<?> c) {
         StringBuilder ret = new StringBuilder("(");
         Class<?>[] parameterTypes = c.getParameterTypes();
@@ -336,6 +360,9 @@ public final class ReflectUtils {
      * @return desc.
      * @throws NotFoundException
      */
+    // 返回对clazz的描述
+    // 基本类型例如 boolean[].class 返回串 "[Z"
+    // 其他类型例如 Object.class 返回串 "Ljava/lang/Object;"
     public static String getDesc(Class<?> c) {
         StringBuilder ret = new StringBuilder();
 
@@ -381,6 +408,7 @@ public final class ReflectUtils {
      * @return desc.
      * @throws NotFoundException
      */
+    // 批量返回clazz的描述 (就是批量调用上面的函数)
     public static String getDesc(final Class<?>[] cs) {
         if (cs.length == 0) {
             return "";
@@ -394,7 +422,8 @@ public final class ReflectUtils {
     }
 
     /**
-     * get method desc.
+     * 返回方法的描述
+     * 例如:
      * int do(int arg1) => "do(I)I"
      * void do(String arg1,boolean arg2) => "do(Ljava/lang/String;Z)V"
      *
@@ -418,6 +447,9 @@ public final class ReflectUtils {
      * @param c constructor.
      * @return desc
      */
+    // 返回对构造函数的描述
+    // 例如: 无参构造函数 返回串 "()V",
+    // 有参构造函数 (String p1, int p2) 返回串 "(Ljava/lang/String;I)V"
     public static String getDesc(final Constructor<?> c) {
         StringBuilder ret = new StringBuilder("(");
         Class<?>[] parameterTypes = c.getParameterTypes();
@@ -429,7 +461,7 @@ public final class ReflectUtils {
     }
 
     /**
-     * get method desc.
+     * 返回对方法的描述串, 不含方法名 (括号后面是方法的返回值)
      * "(I)I", "()V", "(Ljava/lang/String;Z)V"
      *
      * @param m method.
@@ -1014,10 +1046,12 @@ public final class ReflectUtils {
         }
     }
 
+    // 判断参数method是否形如 public get**()/is**() 这种方法
     public static boolean isBeanPropertyReadMethod(Method method) {
         return method != null
                 && Modifier.isPublic(method.getModifiers())
                 && !Modifier.isStatic(method.getModifiers())
+                // 需要有返回值
                 && method.getReturnType() != void.class
                 && method.getDeclaringClass() != Object.class
                 && method.getParameterTypes().length == 0
@@ -1025,6 +1059,7 @@ public final class ReflectUtils {
                 || (method.getName().startsWith("is") && method.getName().length() > 2));
     }
 
+    // 获取method名字中的属性名 (返回的只有属性名, 不带get/is)
     public static String getPropertyNameFromBeanReadMethod(Method method) {
         if (isBeanPropertyReadMethod(method)) {
             if (method.getName().startsWith("get")) {
@@ -1039,6 +1074,7 @@ public final class ReflectUtils {
         return null;
     }
 
+    // 判断method是否是set方法 (就是设置bean属性的set方法)
     public static boolean isBeanPropertyWriteMethod(Method method) {
         return method != null
                 && Modifier.isPublic(method.getModifiers())
@@ -1057,6 +1093,7 @@ public final class ReflectUtils {
         return null;
     }
 
+    // 是否为public字段
     public static boolean isPublicInstanceField(Field field) {
         return Modifier.isPublic(field.getModifiers())
                 && !Modifier.isStatic(field.getModifiers())

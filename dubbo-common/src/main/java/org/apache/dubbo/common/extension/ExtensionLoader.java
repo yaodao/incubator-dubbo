@@ -73,13 +73,15 @@ public class ExtensionLoader<T> {
     // 匹配 "空格,空格", 其中空格可以没有或者有多个, 逗号必须有
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
 
-    // key是Class对象, value是本类对象
+    // key是Class对象, value是ExtensionLoader类的对象
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>();
 
+    // key是Class对象, value是该Class对应的实例对象
     private static final ConcurrentMap<Class<?>, Object> EXTENSION_INSTANCES = new ConcurrentHashMap<>();
 
     // ==============================
 
+    // 暂时认为是带@SPI注解的接口
     private final Class<?> type;
 
     private final ExtensionFactory objectFactory;
@@ -92,7 +94,7 @@ public class ExtensionLoader<T> {
     private final ConcurrentMap<String, Holder<Object>> cachedInstances = new ConcurrentHashMap<>();
     private final Holder<Object> cachedAdaptiveInstance = new Holder<>();
     private volatile Class<?> cachedAdaptiveClass = null;
-    // 对ThreadPool来说是"fix"
+    // 存放@SPI注解的value值, 例如: 对ThreadPool来说是"fix"
     private String cachedDefaultName;
     private volatile Throwable createAdaptiveInstanceError;
 
@@ -102,16 +104,22 @@ public class ExtensionLoader<T> {
 
     private ExtensionLoader(Class<?> type) {
         this.type = type;
-        // type不是ExtensionFactory.class类型时,
-        // 先将key=ExtensionFactory.class  value=ExtensionLoader(ExtensionFactory.class, null) 添加到EXTENSION_LOADERS (map)中, 再继续
+        // 1、type是ExtensionFactory.class时, objectFactory设置为 null
+        // 2、type不是ExtensionFactory.class时,
+        // 会先将entry (ExtensionFactory.class, new ExtensionLoader(ExtensionFactory.class)) 添加到EXTENSION_LOADERS中,
+        // 再继续执行
+        // ExtensionLoader.getExtensionLoader(ExtensionFactory.class) 会得到一个ExtensionLoader对象 obj(type=ExtensionFactory.class, objectFactory=null)
         objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
     }
 
+    // 是否带@SPI注解, true 带
     private static <T> boolean withExtensionAnnotation(Class<T> type) {
         return type.isAnnotationPresent(SPI.class);
     }
 
     @SuppressWarnings("unchecked")
+    // 返回参数clazz对应的ExtensionLoader对象
+    // 当type=ExtensionFactory.class, 返回ExtensionLoader类型的对象 obj = new ExtensionLoader(ExtensionFactory.class, null)
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
         if (type == null) {
             throw new IllegalArgumentException("Extension type == null");
@@ -124,10 +132,11 @@ public class ExtensionLoader<T> {
                     ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
         }
         // 能到这 说明type是接口 且上面有@SPI注解
+        // 取该type对应的ExtensionLoader对象
         ExtensionLoader<T> loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         if (loader == null) {
+            // EXTENSION_LOADERS新增元素
             EXTENSION_LOADERS.putIfAbsent(type, new ExtensionLoader<T>(type));
-            // 赋值给loader, 因为loader是空
             loader = (ExtensionLoader<T>) EXTENSION_LOADERS.get(type);
         }
         return loader;
@@ -312,6 +321,7 @@ public class ExtensionLoader<T> {
         return (T) holder.get();
     }
 
+    // 取name对应的Holder对象(从cachedInstances中取), 没有会新增一个
     private Holder<Object> getOrCreateHolder(String name) {
         Holder<Object> holder = cachedInstances.get(name);
         if (holder == null) {
@@ -341,11 +351,13 @@ public class ExtensionLoader<T> {
      * will be thrown.
      */
     @SuppressWarnings("unchecked")
+    //
     public T getExtension(String name) {
         if (StringUtils.isEmpty(name)) {
             throw new IllegalArgumentException("Extension name == null");
         }
         if ("true".equals(name)) {
+            // name="true"表示取默认值
             return getDefaultExtension();
         }
         Holder<Object> holder = getOrCreateHolder(name);
@@ -365,23 +377,31 @@ public class ExtensionLoader<T> {
     /**
      * Return default extension, return <code>null</code> if it's not configured.
      */
+    // 使用@SPI注解的value值(这个值就是类别名) 获取该类别名对应的类对象实例
     public T getDefaultExtension() {
+        // 若成员变量cachedClasses没有值, 则设置一个map进去 (key是文件中的类别名, value是类对应的Class对象)
         getExtensionClasses();
         if (StringUtils.isBlank(cachedDefaultName) || "true".equals(cachedDefaultName)) {
+            // cachedDefaultName="true"返回null
             return null;
         }
+        // cachedDefaultName的默认值是 @SPI注解的value值
         return getExtension(cachedDefaultName);
     }
 
+    // 参数name是否有对应的clazz
     public boolean hasExtension(String name) {
         if (StringUtils.isEmpty(name)) {
             throw new IllegalArgumentException("Extension name == null");
         }
+        // 从成员变量cachedClasses获取参数name对应的Class对象
         Class<?> c = this.getExtensionClass(name);
         return c != null;
     }
 
+    // 返回文件中的类别名集合
     public Set<String> getSupportedExtensions() {
+        // 将文件中记录解析map (key是文件中的类别名, value是类对应的Class对象)
         Map<String, Class<?>> clazzes = getExtensionClasses();
         return Collections.unmodifiableSet(new TreeSet<>(clazzes.keySet()));
     }
@@ -535,6 +555,7 @@ public class ExtensionLoader<T> {
         try {
             T instance = (T) EXTENSION_INSTANCES.get(clazz);
             if (instance == null) {
+                // 将key是clazz, value是该clazz对应的实例 存入EXTENSION_INSTANCES
                 EXTENSION_INSTANCES.putIfAbsent(clazz, clazz.newInstance());
                 instance = (T) EXTENSION_INSTANCES.get(clazz);
             }
@@ -563,11 +584,13 @@ public class ExtensionLoader<T> {
                         if (method.getAnnotation(DisableInject.class) != null) {
                             continue;
                         }
+                        // method中第一个参数的clazz对象
                         Class<?> pt = method.getParameterTypes()[0];
                         if (ReflectUtils.isPrimitives(pt)) {
                             continue;
                         }
                         try {
+                            // method对应的属性名
                             String property = getSetterProperty(method);
                             Object object = objectFactory.getExtension(pt, property);
                             if (object != null) {
@@ -591,6 +614,7 @@ public class ExtensionLoader<T> {
      * <p>
      * return "", if setter name with length less than 3
      */
+    // 返回method对应的属性名, 例如: setVersion方法 返回 "version"
     private String getSetterProperty(Method method) {
         return method.getName().length() > 3 ? method.getName().substring(3, 4).toLowerCase() + method.getName().substring(4) : "";
     }
@@ -604,13 +628,14 @@ public class ExtensionLoader<T> {
      * <p>
      * 3, only has one parameter
      */
+    // 是 public set** 方法返回true
     private boolean isSetter(Method method) {
         return method.getName().startsWith("set")
                 && method.getParameterTypes().length == 1
                 && Modifier.isPublic(method.getModifiers());
     }
 
-    // 从extensionClasses获取参数name对应的Class对象
+    // 从成员变量cachedClasses获取参数name对应的Class对象
     private Class<?> getExtensionClass(String name) {
         if (type == null) {
             throw new IllegalArgumentException("Extension type == null");
@@ -621,7 +646,7 @@ public class ExtensionLoader<T> {
         return getExtensionClasses().get(name);
     }
 
-    // 获取extensionClasses, key是类别名, value是类对应的Class对象
+    // 加载文件中的类到map (key是文件中的类别名, value是类对应的Class对象), 并将map设置到cachedClasses中
     private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
@@ -636,8 +661,11 @@ public class ExtensionLoader<T> {
         return classes;
     }
 
-    // synchronized in getExtensionClasses
+    // 加载文件中的类, 在调用该函数的地方进行了同步
+    // 例如文件内容: "accesslog=com.alibaba.dubbo.rpc.filter.AccessLogFilter"
+    // 返回的 key是accesslog, value是AccessLogFilter.class
     private Map<String, Class<?>> loadExtensionClasses() {
+        // 设置成员变量cachedDefaultName的值
         cacheDefaultExtensionName();
 
         Map<String, Class<?>> extensionClasses = new HashMap<>();
@@ -655,8 +683,8 @@ public class ExtensionLoader<T> {
      * extract and cache default extension name if exists
      */
     /**
-     * 设置成员变量cachedDefaultName, 设置为注解@SPI的value值,
-     * 可以用type=ThreadPool来走一遍看下
+     * 将成员变量cachedDefaultName的值, 设置为type的注解@SPI的value值
+     * (type可以是任意的类, 可以用type=ThreadPool来走一遍看下)
      */
     private void cacheDefaultExtensionName() {
         final SPI defaultAnnotation = type.getAnnotation(SPI.class);
@@ -871,7 +899,7 @@ public class ExtensionLoader<T> {
 
     @SuppressWarnings("deprecation")
     private String findAnnotationName(Class<?> clazz) {
-        // 有extention注解 则返回注解的值, 没有则返回clazz名字的前缀
+        // 有extention注解 则返回注解的value值, 没有则返回clazz名字的前缀
         org.apache.dubbo.common.Extension extension = clazz.getAnnotation(org.apache.dubbo.common.Extension.class);
         if (extension == null) {
             String name = clazz.getSimpleName();
