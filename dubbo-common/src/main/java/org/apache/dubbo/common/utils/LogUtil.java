@@ -45,6 +45,7 @@ public class LogUtil {
 
     }
 
+    // 查看logList里面是否有指定的名字 (这个logList我暂时也不知道填充的内容是什么样子)
     public static int findName(String expectedLogName) {
         int count = 0;
         List<Log> logList = DubboAppender.logList;
@@ -57,6 +58,7 @@ public class LogUtil {
         return count;
     }
 
+    // 查看logList里面是否有指定的Level
     public static int findLevel(Level expectedLevel) {
         int count = 0;
         List<Log> logList = DubboAppender.logList;
@@ -68,7 +70,7 @@ public class LogUtil {
         }
         return count;
     }
-
+    // 查看logList里面是否有指定的Level 和threadName
     public static int findLevelWithThreadName(Level expectedLevel, String threadName) {
         int count = 0;
         List<Log> logList = DubboAppender.logList;
@@ -81,6 +83,7 @@ public class LogUtil {
         return count;
     }
 
+    // 查看logList里面是否有指定的threadName
     public static int findThread(String expectedThread) {
         int count = 0;
         List<Log> logList = DubboAppender.logList;
@@ -93,6 +96,7 @@ public class LogUtil {
         return count;
     }
 
+    // 查看logList里面是否有指定的expectedMessage
     public static int findMessage(String expectedMessage) {
         int count = 0;
         List<Log> logList = DubboAppender.logList;
@@ -105,6 +109,7 @@ public class LogUtil {
         return count;
     }
 
+    // 查看logList里面是否有指定的Level 和expectedMessage
     public static int findMessage(Level expectedLevel, String expectedMessage) {
         int count = 0;
         List<Log> logList = DubboAppender.logList;

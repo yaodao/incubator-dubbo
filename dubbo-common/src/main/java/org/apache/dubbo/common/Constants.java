@@ -455,6 +455,7 @@ public class Constants {
 
     public static final String REGISTRY_SEPARATOR = "|";
 
+    // 匹配 "空格|空格"  或者 "空格;空格"
     public static final Pattern REGISTRY_SPLIT_PATTERN = Pattern
             .compile("\\s*[|;]+\\s*");
 

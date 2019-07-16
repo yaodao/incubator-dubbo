@@ -180,6 +180,9 @@ class URL implements Serializable {
      * @return URL instance
      * @see URL
      */
+    // 这个函数作用就是将参数url的各个部分拆出来, 最后用这些拆出来的数据组成一个URL对象 (这里的URL对象是该类自身的对象)
+    // 拆出来的参数有 protocol, username, password, host, port, path, parameters, 其中host可以看做是ip地址, parameters是url的问号后面的参数集合
+    // url 举例: "dubbo://admin:hello1234@10.20.130.230:20880/context/path?version=1.0.0&application=morgan&noValue"
     public static URL valueOf(String url) {
         if (url == null || (url = url.trim()).length() == 0) {
             throw new IllegalArgumentException("url == null");
@@ -192,8 +195,10 @@ class URL implements Serializable {
         String path = null;
         Map<String, String> parameters = null;
         int i = url.indexOf("?"); // separator between body and parameters
+        // 若url中带参数
         if (i >= 0) {
             String[] parts = url.substring(i + 1).split("&");
+            // url后面的参数以key-value形式存放到parameters
             parameters = new HashMap<>();
             for (String part : parts) {
                 part = part.trim();
@@ -206,14 +211,18 @@ class URL implements Serializable {
                     }
                 }
             }
+            // url取的是问号之前的字符串
             url = url.substring(0, i);
         }
+        // 可以看出url是不断被截断的, 到这里就不带参数了(参数在上面被截断)
+        // url类似"dubbo://127.0.0.1:9010/"
         i = url.indexOf("://");
         if (i >= 0) {
             if (i == 0) {
                 throw new IllegalStateException("url missing protocol: \"" + url + "\"");
             }
             protocol = url.substring(0, i);
+            //  取ip地址串
             url = url.substring(i + 3);
         } else {
             // case: file:/path/to/file.txt
@@ -223,15 +232,19 @@ class URL implements Serializable {
                     throw new IllegalStateException("url missing protocol: \"" + url + "\"");
                 }
                 protocol = url.substring(0, i);
+                // 取/开头的字符串, "/path/to/file.txt"
                 url = url.substring(i + 1);
             }
         }
-
+        // 到这url就不带协议串了
         i = url.indexOf("/");
         if (i >= 0) {
+            // path是/之后的字符串(不包括/)
+            // 如 "context/path"
             path = url.substring(i + 1);
             url = url.substring(0, i);
         }
+        // 检查url里面是否有用户名密码
         i = url.lastIndexOf("@");
         if (i >= 0) {
             username = url.substring(0, i);
@@ -240,6 +253,7 @@ class URL implements Serializable {
                 password = username.substring(j + 1);
                 username = username.substring(0, j);
             }
+            // 到这里url只剩ip和端口了
             url = url.substring(i + 1);
         }
         i = url.lastIndexOf(":");
@@ -475,6 +489,7 @@ class URL implements Serializable {
         return decode(getParameter(key, defaultValue));
     }
 
+    // 从成员变量parameters中, 取key对应的value值, 若为空, 再用default.key取parameters中的value值
     public String getParameter(String key) {
         String value = parameters.get(key);
         if (StringUtils.isEmpty(value)) {
@@ -483,6 +498,7 @@ class URL implements Serializable {
         return value;
     }
 
+    // 从成员变量parameters中取key对应的value值, 若为空, 则返回默认值defaultValue
     public String getParameter(String key, String defaultValue) {
         String value = getParameter(key);
         if (StringUtils.isEmpty(value)) {
@@ -578,16 +594,20 @@ class URL implements Serializable {
         return l;
     }
 
+    // 从成员变量numbers 或 parameters中取值
     public int getParameter(String key, int defaultValue) {
+        // 从成员变量numbers中取值
         Number n = getNumbers().get(key);
         if (n != null) {
             return n.intValue();
         }
+        // 上面没取到 再从成员变量parameters中取值
         String value = getParameter(key);
         if (StringUtils.isEmpty(value)) {
             return defaultValue;
         }
         int i = Integer.parseInt(value);
+        // 将key和i 存入成员变量numbers
         getNumbers().put(key, i);
         return i;
     }
@@ -694,6 +714,7 @@ class URL implements Serializable {
         return value.charAt(0);
     }
 
+    // 从成员变量parameters中, 取key对应的的value值, 并转成boolean类型, 没有就取默认值defaultValue
     public boolean getParameter(String key, boolean defaultValue) {
         String value = getParameter(key);
         if (StringUtils.isEmpty(value)) {
@@ -1028,12 +1049,14 @@ class URL implements Serializable {
      * @param parameters parameters in key-value pairs
      * @return A new URL
      */
+    // 用参数map中的entry, 新增或替换原来的map中的entry值
     public URL addParameters(Map<String, String> parameters) {
         if (CollectionUtils.isEmptyMap(parameters)) {
             return this;
         }
 
         boolean hasAndEqual = true;
+        // 判断参数map和该url自身的map的value值是否相同
         for (Map.Entry<String, String> entry : parameters.entrySet()) {
             String value = getParameters().get(entry.getKey());
             if (value == null) {
@@ -1054,6 +1077,7 @@ class URL implements Serializable {
         }
 
         Map<String, String> map = new HashMap<>(getParameters());
+        // 添加到url的参数map中
         map.putAll(parameters);
         return new URL(protocol, username, password, host, port, path, map);
     }
@@ -1121,6 +1145,8 @@ class URL implements Serializable {
         return new URL(protocol, username, password, host, port, path, new HashMap<>());
     }
 
+    // key为"protocol", "username", "password", "host", "port", "path" 时, 直接返回url成员变量的值
+    // 其它key值, 从url成员变量parameters中, 取key对应的value值
     public String getRawParameter(String key) {
         if (Constants.PROTOCOL_KEY.equals(key)) {
             return protocol;
@@ -1311,6 +1337,7 @@ class URL implements Serializable {
      * The format of return value is '{group}/{interfaceName}:{version}'
      * @return
      */
+    // 返回字符串 "{group}/{interfaceName}:{version}", 其中 inf就是{interfaceName}
     public String getServiceKey() {
         String inf = getServiceInterface();
         if (inf == null) {
@@ -1331,6 +1358,7 @@ class URL implements Serializable {
         return buildKey(inf, getParameter(Constants.GROUP_KEY), getParameter(Constants.VERSION_KEY));
     }
 
+    // 返回字符串 "{group}/{interfaceName}:{version}", 其中 {interfaceName}就是path
     public static String buildKey(String path, String group, String version) {
         StringBuilder buf = new StringBuilder();
         if (group != null && group.length() > 0) {
@@ -1357,6 +1385,7 @@ class URL implements Serializable {
     }
 
     public String getServiceInterface() {
+        // 从成员变量parameters中, 取key="interface" 对应的value值. 若为空, 则返回默认值path
         return getParameter(Constants.INTERFACE_KEY, path);
     }
 

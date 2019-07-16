@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * InternalThreadFactory.
  */
+// 从字面理解, 这就是个产生线程的工厂, 特点是: 由这个类产生的线程, 线程的名字是由我们自己定义的.
 public class NamedThreadFactory implements ThreadFactory {
 
     protected static final AtomicInteger POOL_SEQ = new AtomicInteger(1);
@@ -50,7 +51,9 @@ public class NamedThreadFactory implements ThreadFactory {
     }
 
     @Override
+    // 这个方法在自定义的线程池中会被调用到
     public Thread newThread(Runnable runnable) {
+        // 线程名字
         String name = mPrefix + mThreadNum.getAndIncrement();
         Thread ret = new Thread(mGroup, runnable, name, 0);
         ret.setDaemon(mDaemon);
