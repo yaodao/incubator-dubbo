@@ -33,12 +33,15 @@ public class AdaptiveExtensionFactory implements ExtensionFactory {
     private final List<ExtensionFactory> factories;
 
     public AdaptiveExtensionFactory() {
-        // 返回对象 new ExtensionLoader(ExtensionFactory.class, null)
+        // 返回ExtensionLoader对象(type=ExtensionFactory.class, objectFactory=null)
         ExtensionLoader<ExtensionFactory> loader = ExtensionLoader.getExtensionLoader(ExtensionFactory.class);
         List<ExtensionFactory> list = new ArrayList<ExtensionFactory>();
-        for (String name : loader.getSupportedExtensions()) {
-            list.add(loader.getExtension(name));
+
+        // 在这里 loader的成员变量type=ExtensionFactory.class
+        for (String name : loader.getSupportedExtensions()) {// loader.getSupportedExtensions() 会将所有ExtensionFactory接口的实现类的名字取到
+            list.add(loader.getExtension(name));// loader的成员变量type=ExtensionFactory.class
         }
+        // factories中存放所有ExtensionFactory接口的实现类的对象
         factories = Collections.unmodifiableList(list);
     }
 
@@ -46,6 +49,8 @@ public class AdaptiveExtensionFactory implements ExtensionFactory {
     // type是 method中第一个参数的clazz对象, name是 method对应的属性名
     public <T> T getExtension(Class<T> type, String name) {
         for (ExtensionFactory factory : factories) {
+            // 依次遍历各个ExtensionFactory实现的getExtension方法，一旦获取到Extension即返回
+            // 如果遍历完所有的ExtensionFactory实现均无法找到Extension,则返回null
             T extension = factory.getExtension(type, name);
             if (extension != null) {
                 return extension;

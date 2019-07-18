@@ -80,6 +80,7 @@ public class JavassistCompiler extends AbstractCompiler {
         // compile
         ClassLoader classLoader = ClassHelper.getCallerClassLoader(getClass());
         CtClass cls = builder.build(classLoader);
+        // // TODO: 2019/7/19 暂时理解是将字节码加载到JVM, 等上网查下
         return cls.toClass(classLoader, JavassistCompiler.class.getProtectionDomain());
     }
 

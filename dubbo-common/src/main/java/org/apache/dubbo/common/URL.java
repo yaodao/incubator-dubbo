@@ -90,6 +90,7 @@ class URL implements Serializable {
 
     private final String path;
 
+    // parameters是url的问号后面的参数集合
     private final Map<String, String> parameters;
 
     // ==== cache ====
@@ -478,6 +479,7 @@ class URL implements Serializable {
     }
 
     public Map<String, String> getParameters() {
+        // parameters是url的问号后面的参数集合
         return parameters;
     }
 

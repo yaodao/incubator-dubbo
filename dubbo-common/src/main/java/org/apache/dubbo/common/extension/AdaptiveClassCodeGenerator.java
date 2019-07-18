@@ -66,7 +66,8 @@ public class AdaptiveClassCodeGenerator {
     private static final String CODE_EXTENSION_ASSIGNMENT = "%s extension = (%<s)%s.getExtensionLoader(%s.class).getExtension(extName);\n";
     
     private final Class<?> type;
-    
+
+    // 暂时认为是@SPI的value值
     private String defaultExtName;
     
     public AdaptiveClassCodeGenerator(Class<?> type, String defaultExtName) {
@@ -85,10 +86,10 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate and return class code
      */
-    // 生成一个类的字符串
+    // 生成一个类的字符串(包括类中的方法)
     public String generate() {
         // no need to generate adaptive class since there's no adaptive method found.
-        // 需要有@Adaptive标注的方法
+        // 成员变量type需要有@Adaptive标注的方法
         if (!hasAdaptiveMethod()) {
             throw new IllegalStateException("No adaptive method exist on extension " + type.getName() + ", refuse to create the adaptive class!");
         }
@@ -163,13 +164,14 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate method declaration
      */
-    // 返回一个函数字符串(包括返回值, 函数名, 参数, 函数体)
+    // 根据method信息, 生成一个函数字符串(包括返回值, 函数名, 参数, 抛出的异常, 方法体), 最后生成的代码串就是对method的一个代理调用
     private String generateMethod(Method method) {
         String methodReturnType = method.getReturnType().getCanonicalName();
         String methodName = method.getName();
         String methodContent = generateMethodContent(method);
         String methodArgs = generateMethodArguments(method);
         String methodThrows = generateMethodThrows(method);
+        // 返回字符串为 "public %s %s(%s) %s {\n%s}\n"
         return String.format(CODE_METHOD_DECLARATION, methodReturnType, methodName, methodArgs, methodThrows, methodContent);
     }
 
@@ -226,17 +228,32 @@ public class AdaptiveClassCodeGenerator {
     /**
      * generate method content
      */
+
+    /**
+     * 根据method方法的信息, 生成类似代理模式的调用代码串, 如下: 该函数只生成方法体, 这段串是方法体
+
+         if (arg1 == null)
+            throw new IllegalArgumentException("url == null");
+         com.alibaba.dubbo.common.URL url = arg1;
+         String extName = url.getParameter("t", "dubbo");
+         if (extName == null)
+            throw new IllegalStateException("Fail to get extension(shuqi.dubbotest.spi.adaptive.AdaptiveExt2) name from url(" + url.toString() + ") use keys([t])");
+         shuqi.dubbotest.spi.adaptive.AdaptiveExt2 extension =
+            (shuqi.dubbotest.spi.adaptive.AdaptiveExt2) ExtensionLoader.getExtensionLoader(shuqi.dubbotest.spi.adaptive.AdaptiveExt2.class).getExtension(extName);
+         return extension.echo(arg0, arg1); // 这里就是代理调用
+
+     */
     private String generateMethodContent(Method method) {
         Adaptive adaptiveAnnotation = method.getAnnotation(Adaptive.class);
         StringBuilder code = new StringBuilder(512);
         if (adaptiveAnnotation == null) {
-            // 方法上没有@Adaptive注解, 返回一个字符串(内容是"throws new ***Exception()")
+            // 方法上没有@Adaptive注解, 函数直接返回一个字符串(内容是"throws new ***Exception()")
             return generateUnsupported(method);
         } else {
             // 获取URL类型的参数在method的所有参数中的位置, 没有返回-1
             int urlTypeIndex = getUrlTypeIndex(method);
             
-            // found parameter in URL type
+            // method有URL类型的参数
             if (urlTypeIndex != -1) {
                 // Null Point check
                 code.append(generateUrlNullCheck(urlTypeIndex));
@@ -251,7 +268,8 @@ public class AdaptiveClassCodeGenerator {
             boolean hasInvocation = hasInvocationArgument(method);
             
             code.append(generateInvocationArgumentNullCheck(method));
-            
+
+            // 产生一个给extName赋值的语句 "String extName = **"
             code.append(generateExtNameAssignment(value, hasInvocation));
             // check extName == null?
             code.append(generateExtNameNullCheck(value));
@@ -290,11 +308,25 @@ public class AdaptiveClassCodeGenerator {
      * @return
      */
 
-    // value数组是Adaptive注解的value值, hasInvocation表示调用处的method有Invocation类型的参数
+    /**
+     * 感觉这个函数就是产生一个给extName赋值的语句
+     *
+     * 1.若method有@Adaptive注解, 且@Adaptive中value有值,
+     * 1) 若value值不是"protocol" 且method没有Invocation类型的参数, 则返回串 String extName = url.getParameter("%s", "%s")
+     * 2) 若value值不是"protocol" 且method有Invocation类型的参数, 则返回串 String extName = url.getMethodParameter(methodName, "%s", "%s")
+     *
+     * 2.若@Adaptive中value为空, 返回串 "String extName = null;"
+     *
+     *
+     * @param value Adaptive注解的value值, 是数组
+     * @param hasInvocation 表示本函数被调用处的method是否有Invocation类型的参数
+     * @return
+     */
     private String generateExtNameAssignment(String[] value, boolean hasInvocation) {
         // TODO: refactor it
         String getNameCode = null;
         for (int i = value.length - 1; i >= 0; --i) {
+            // @Adaptive注解中value有值, 给getNameCode赋值
             if (i == value.length - 1) {
                 if (null != defaultExtName) {
                     if (!"protocol".equals(value[i])) {
@@ -338,7 +370,7 @@ public class AdaptiveClassCodeGenerator {
      */
     /**
      * 生成代码例如:
-     * org.apache.dubbo.common.threadpool.ThreadPool extension =(org.apache.dubbo.common.threadpool.ThreadPool)ExtensionLoader.getExtensionLoader(org.apache.dubbo.common.threadpool.ThreadPool.class).getExtension(extName);
+     * org.apache.dubbo.common.threadpool.ThreadPool extension =(ThreadPool)ExtensionLoader.getExtensionLoader(ThreadPool.class).getExtension(extName);
      * @return
      */
     private String generateExtensionAssignment() {
@@ -375,14 +407,14 @@ public class AdaptiveClassCodeGenerator {
      * generate code to test argument of type <code>Invocation</code> is null
      */
     /**
-     * 若method有org.apache.dubbo.rpc.Invocation类型的参数, 则生成检验该Invocation类型的参数是否为空的代码, 若无则返回空串
+     * method若有org.apache.dubbo.rpc.Invocation类型的参数, 则生成检验该Invocation类型的参数是否为空的代码,
+     *       若无则返回空串
      *
-     * 返回字符串如下:
+     * 若有Invocation类型的参数argi, 则返回字符串如下:
      * if (argi == null)
      *    throw new IllegalArgumentException("invocation == null");
      * String methodName = argi.getMethodName();
      *
-     * 返回非空串时, 表示argi是Invocation类型的对象, 这点从异常信息也可以看出
      */
     private String generateInvocationArgumentNullCheck(Method method) {
         Class<?>[] pts = method.getParameterTypes();
@@ -395,7 +427,7 @@ public class AdaptiveClassCodeGenerator {
      * get value of adaptive annotation or if empty return splitted simple name
      */
     /**
-     * 获取参数adaptiveAnnotation这个注解中的value值, 若没有值, 则返回类似hello.world的串 (假如type所属的类是HelloWorld)
+     * 获取参数注解中的value值, 若没有值, 则返回类似hello.world的串 (假如type所属的类是HelloWorld)
      * @param adaptiveAnnotation
      * @return
      */

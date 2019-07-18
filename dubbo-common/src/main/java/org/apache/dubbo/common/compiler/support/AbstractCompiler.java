@@ -50,15 +50,17 @@ public abstract class AbstractCompiler implements Compiler {
         } else {
             throw new IllegalArgumentException("No such class name in " + code);
         }
-        // 得到的字符串是 包名+类名 或者 类名
+        // 得到的字符串是 包名+类名 或者 只有类名
         String className = pkg != null && pkg.length() > 0 ? pkg + "." + cls : cls;
         try {
+            // 加载这个clazz, 并执行初始化
             return Class.forName(className, true, ClassHelper.getCallerClassLoader(getClass()));
         } catch (ClassNotFoundException e) {
             if (!code.endsWith("}")) {
                 throw new IllegalStateException("The java code not endsWith \"}\", code: \n" + code + "\n");
             }
             try {
+                // 如果没有找到这个类, 使用Javassist再构造一次字节码, 并加载到jvm
                 return doCompile(className, code);
             } catch (RuntimeException t) {
                 throw t;
