@@ -173,6 +173,11 @@ public class CollectionUtils {
         return obj1.equals(obj2);
     }
 
+    /**
+     * 将数组pairs中的元素 添加到map, key是pairs[i], value是pairs[i+1]
+     * @param pairs 数组, size必须是偶数
+     * @return map
+     */
     public static Map<String, String> toStringMap(String... pairs) {
         Map<String, String> parameters = new HashMap<>();
         if (pairs.length > 0) {

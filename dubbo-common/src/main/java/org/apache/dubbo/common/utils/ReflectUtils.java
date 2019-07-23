@@ -143,7 +143,7 @@ public final class ReflectUtils {
                 || Number.class.isAssignableFrom(cls) || Date.class.isAssignableFrom(cls);
     }
 
-    // 返回8个基本类型的包装类型
+    // 若是基本类型, 则返回8个基本类型的包装类型, 若不是基本类型则原样返回
     public static Class<?> getBoxedClass(Class<?> c) {
         if (c == int.class) {
             c = Integer.class;

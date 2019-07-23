@@ -168,24 +168,30 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     public ServiceConfig() {
     }
 
+    // 设置当前对象的成员变量值
     public ServiceConfig(Service service) {
         appendAnnotation(Service.class, service);
+        // 设置this.methods值
+        // 取service注解对象中的methods()值, 将其转成List<MethodConfig> 再赋给this.methods
         setMethods(MethodConfig.constructMethodConfig(service.methods()));
     }
 
     @Deprecated
+    // ProviderConfig对象列表转为ProtocolConfig对象列表
     private static List<ProtocolConfig> convertProviderToProtocol(List<ProviderConfig> providers) {
         if (CollectionUtils.isEmpty(providers)) {
             return null;
         }
         List<ProtocolConfig> protocols = new ArrayList<ProtocolConfig>(providers.size());
         for (ProviderConfig provider : providers) {
+            // 单个ProviderConfig对象转为单个ProtocolConfig对象
             protocols.add(convertProviderToProtocol(provider));
         }
         return protocols;
     }
 
     @Deprecated
+    // ProtocolConfig对象列表转为ProviderConfig对象列表
     private static List<ProviderConfig> convertProtocolToProvider(List<ProtocolConfig> protocols) {
         if (CollectionUtils.isEmpty(protocols)) {
             return null;
@@ -198,6 +204,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     @Deprecated
+    // ProviderConfig对象转为ProtocolConfig对象
     private static ProtocolConfig convertProviderToProtocol(ProviderConfig provider) {
         ProtocolConfig protocol = new ProtocolConfig();
         protocol.setName(provider.getProtocol().getName());
@@ -214,6 +221,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     @Deprecated
+    // ProtocolConfig对象转为ProviderConfig对象
     private static ProviderConfig convertProtocolToProvider(ProtocolConfig protocol) {
         ProviderConfig provider = new ProviderConfig();
         provider.setProtocol(protocol);
@@ -229,11 +237,13 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         return provider;
     }
 
+    // 从成员变量RANDOM_PORT_MAP中取参数protocol对应的值
     private static Integer getRandomPort(String protocol) {
         protocol = protocol.toLowerCase();
         return RANDOM_PORT_MAP.getOrDefault(protocol, Integer.MIN_VALUE);
     }
 
+    // 将(protocol, port) 存入 成员变量RANDOM_PORT_MAP
     private static void putRandomPort(String protocol, Integer port) {
         protocol = protocol.toLowerCase();
         if (!RANDOM_PORT_MAP.containsKey(protocol)) {
@@ -242,6 +252,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         }
     }
 
+    // 取urls列表中的一个元素
     public URL toUrl() {
         return urls.isEmpty() ? null : urls.iterator().next();
     }
@@ -749,21 +760,27 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     private void completeCompoundConfigs() {
         if (provider != null) {
             if (application == null) {
+                // 设置当前对象的application值为ProviderConfig对象的application
                 setApplication(provider.getApplication());
             }
             if (module == null) {
+                // 设置当前对象的module值为ProviderConfig对象的module
                 setModule(provider.getModule());
             }
             if (registries == null) {
+                // 将ProviderConfig对象的registries 添加到当前对象的registries中
                 setRegistries(provider.getRegistries());
             }
             if (monitor == null) {
+                // 设置当前对象的monitor值为ProviderConfig对象的monitor
                 setMonitor(provider.getMonitor());
             }
             if (protocols == null) {
+                // 设置ConfigManager对象的成员变量protocols 和 当前对象的成员变量protocols
                 setProtocols(provider.getProtocols());
             }
             if (configCenter == null) {
+                // 设置当前对象的configCenter值为ProviderConfig对象的configCenter
                 setConfigCenter(provider.getConfigCenter());
             }
         }

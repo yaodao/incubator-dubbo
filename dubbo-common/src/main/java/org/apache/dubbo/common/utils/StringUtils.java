@@ -660,6 +660,7 @@ public final class StringUtils {
      * @param split split
      * @return String.
      */
+    // 使用split把array中的元素串起来, 例如 若split=","  array=[aa, bb, cc], 则返回串 "aa,bb,cc"
     public static String join(String[] array, String split) {
         if (ArrayUtils.isEmpty(array)) {
             return EMPTY;

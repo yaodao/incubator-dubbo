@@ -211,17 +211,21 @@ public class ConfigManager {
         return Optional.of(defaults);
     }
 
+    // 将参数protocolConfigs中的元素添加到当前对象的成员变量protocols中
     public void addProtocols(List<ProtocolConfig> protocolConfigs) {
         if (protocolConfigs != null) {
             protocolConfigs.forEach(this::addProtocol);
         }
     }
 
+    // 将(protocolConfig.getId(),  protocolConfig) 添加到成员变量protocols中
+    // 估计是增加一条protocol的配置信息
     public void addProtocol(ProtocolConfig protocolConfig) {
         if (protocolConfig == null) {
             return;
         }
 
+        // key= 若id不为空, 返回id, 否则 若允许默认值 则返回"default" 否则返回null
         String key = StringUtils.isNotEmpty(protocolConfig.getId())
                 ? protocolConfig.getId()
                 : (protocolConfig.isDefault() == null || protocolConfig.isDefault()) ? DEFAULT_KEY : null;
@@ -229,11 +233,12 @@ public class ConfigManager {
         if (StringUtils.isEmpty(key)) {
             throw new IllegalStateException("A ProtocolConfig should either has an id or it's the default one, " + protocolConfig);
         }
-
+        // 若有id相同， 且属性值相同的ProtocolConfig对象, 则warn下, 不添加到protocols中
         if (protocols.containsKey(key) && !protocolConfig.equals(protocols.get(key))) {
             logger.warn("Duplicate ProtocolConfig found, there already has one default ProtocolConfig or more than two ProtocolConfigs have the same id, " +
                                                     "you can try to give each ProtocolConfig a different id. " + protocolConfig);
         } else {
+            // key= id, value= protocolConfig对象
             protocols.put(key, protocolConfig);
         }
     }
@@ -309,7 +314,9 @@ public class ConfigManager {
         getConsumers().values().forEach(ConsumerConfig::refresh);
     }
 
+    // oldOne和newOne 两个对象成员变量值是否相同, 不同则抛出异常
     private void checkDuplicate(AbstractConfig oldOne, AbstractConfig newOne) {
+        // 比较oldOne和newOne对象的属性值是否相同, 不同抛出异常
         if (oldOne != null && !oldOne.equals(newOne)) {
             String configName = oldOne.getClass().getSimpleName();
             throw new IllegalStateException("Duplicate Config found for " + configName + ", you should use only one unique " + configName + " for one application.");

@@ -316,6 +316,7 @@ class URL implements Serializable {
                 : new URL(url.getProtocol(), url.getUsername(), url.getPassword(), url.getHost(), url.getPort(), url.getPath(), newMap);
     }
 
+    // 使用utf-8编码encode参数value
     public static String encode(String value) {
         if (StringUtils.isEmpty(value)) {
             return "";

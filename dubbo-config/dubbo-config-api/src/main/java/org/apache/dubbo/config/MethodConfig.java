@@ -30,6 +30,7 @@ import java.util.List;
  *
  * @export
  */
+// MethodConfig类的成员变量 和 @Method注解中的元素基本相同
 public class MethodConfig extends AbstractMethodConfig {
 
     private static final long serialVersionUID = 884908855422675941L;
@@ -123,21 +124,28 @@ public class MethodConfig extends AbstractMethodConfig {
     public MethodConfig() {
     }
 
+    // 取注解method对象中的值, 给当前类MethodConfig对象的成员变量赋值,
+    // 最后得到一个MethodConfig对象
     public MethodConfig(Method method) {
+        // 取注解method对象中的值, 设置本类对象的成员变量
         appendAnnotation(Method.class, method);
 
         this.setReturn(method.isReturn());
 
+        // 注解method中的oninvoke()值不空, 设置当前对象的成员变量oninvoke值为oninvoke()
         if(!"".equals(method.oninvoke())){
             this.setOninvoke(method.oninvoke());
         }
+        // onreturn()值不空, 则this.onreturn = onreturn()
         if(!"".equals(method.onreturn())){
             this.setOnreturn(method.onreturn());
         }
+        // onthrow()值不空, 则this.onthrow = onthrow()
         if(!"".equals(method.onthrow())){
             this.setOnthrow(method.onthrow());
         }
 
+        // 将method中的arguments()值 转成ArgumentConfig, 放到list中, 设置this.arguments=list
         if (method.arguments() != null && method.arguments().length != 0) {
             List<ArgumentConfig> argumentConfigs = new ArrayList<ArgumentConfig>(method.arguments().length);
             this.setArguments(argumentConfigs);
@@ -148,10 +156,12 @@ public class MethodConfig extends AbstractMethodConfig {
         }
     }
 
+    // 将@Method注解对象的数组 转成MethodConfig对象的list 返回
     public static List<MethodConfig> constructMethodConfig(Method[] methods) {
         if (methods != null && methods.length != 0) {
             List<MethodConfig> methodConfigs = new ArrayList<MethodConfig>(methods.length);
             for (int i = 0; i < methods.length; i++) {
+                // 对每个Method注解, 生成一个对应的MethodConfig对象
                 MethodConfig methodConfig = new MethodConfig(methods[i]);
                 methodConfigs.add(methodConfig);
             }

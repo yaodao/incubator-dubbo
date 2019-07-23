@@ -139,7 +139,9 @@ public class ApplicationConfig extends AbstractConfig {
         return name;
     }
 
+    // 设置this.name = 参数name
     public void setName(String name) {
+        //  验证name值的长度和内容是否合法, 不合法直接抛出异常
         checkName(Constants.NAME, name);
         this.name = name;
         if (StringUtils.isEmpty(id)) {

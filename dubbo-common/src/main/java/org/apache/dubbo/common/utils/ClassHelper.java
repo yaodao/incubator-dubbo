@@ -94,16 +94,20 @@ public class ClassHelper {
     public static ClassLoader getClassLoader(Class<?> clazz) {
         ClassLoader cl = null;
         try {
+            // 获取当前线程的上下文类加载器, 所谓上下文就是该类加载器加载了当前线程所用到的那些类
             cl = Thread.currentThread().getContextClassLoader();
         } catch (Throwable ex) {
             // Cannot access thread context ClassLoader - falling back to system class loader...
         }
         if (cl == null) {
             // No thread context class loader -> use class loader of this class.
+            // 返回加载参数clazz的类加载器
             cl = clazz.getClassLoader();
             if (cl == null) {
+                // 空表示是根加载器
                 // getClassLoader() returning null indicates the bootstrap ClassLoader
                 try {
+                    // 获取app加载器
                     cl = ClassLoader.getSystemClassLoader();
                 } catch (Throwable ex) {
                     // Cannot access system ClassLoader - oh well, maybe the caller can live with null...
@@ -240,6 +244,9 @@ public class ClassHelper {
                 && isPrimitive(method.getParameterTypes()[0]);
     }
 
+    // 是否是get/is函数
+    // method的名字以 get/is开头 且 名字不是"get"/"is" 且 名字不是 "getClass"/"getObject"
+    // 且 method是public, 无参数, 返回值是基础的类型, 返回true
     public static boolean isGetter(Method method) {
         String name = method.getName();
         return (name.startsWith("get") || name.startsWith("is"))
@@ -250,6 +257,8 @@ public class ClassHelper {
                 && isPrimitive(method.getReturnType());
     }
 
+    // 当type是8个基本类型, void, 如下的类型时, 返回true
+    // 这些类型都是基础的类型, 返回true (若是map,list,set 则返回false)
     public static boolean isPrimitive(Class<?> type) {
         return type.isPrimitive()
                 || type == String.class

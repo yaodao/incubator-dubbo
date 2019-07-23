@@ -46,6 +46,7 @@ public class ConfigUtils {
     private ConfigUtils() {
     }
 
+    // value不是"false","0","null","N/A",空串时 返回true
     public static boolean isNotEmpty(String value) {
         return !isEmpty(value);
     }
@@ -59,6 +60,7 @@ public class ConfigUtils {
                 || "N/A".equalsIgnoreCase(value);
     }
 
+    // value值是 "true"或者"default"时, 返回true
     public static boolean isDefault(String value) {
         return "true".equalsIgnoreCase(value)
                 || "default".equalsIgnoreCase(value);

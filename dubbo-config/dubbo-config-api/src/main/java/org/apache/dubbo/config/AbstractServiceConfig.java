@@ -201,8 +201,11 @@ public abstract class AbstractServiceConfig extends AbstractInterfaceConfig {
     }
 
     @SuppressWarnings({"unchecked"})
+    // 设置ConfigManager对象的成员变量protocols 和 当前对象的成员变量protocols
     public void setProtocols(List<? extends ProtocolConfig> protocols) {
+        // 将参数protocols中的元素添加到ConfigManager对象的成员变量protocols中
         ConfigManager.getInstance().addProtocols((List<ProtocolConfig>) protocols);
+        // 设置当前对象的成员变量protocols为参数protocols
         this.protocols = (List<ProtocolConfig>) protocols;
     }
 

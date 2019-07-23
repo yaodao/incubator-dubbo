@@ -64,31 +64,37 @@ public abstract class AbstractConfig implements Serializable {
     /**
      * The rule qualification for <b>name</b>
      */
+    // 匹配 减号，句号，下划线，字母和数字 所组成的字符串， 例如可以匹配： "-aa_bb00"
     private static final Pattern PATTERN_NAME = Pattern.compile("[\\-._0-9a-zA-Z]+");
 
     /**
      * The rule qualification for <b>multiply name</b>
      */
+    // 匹配 逗号，减号，句号，下划线，字母和数字 所组成的字符串， 例如： "aabb,count.000"
     private static final Pattern PATTERN_MULTI_NAME = Pattern.compile("[,\\-._0-9a-zA-Z]+");
 
     /**
      * The rule qualification for <b>method names</b>
      */
+    // 匹配 单个字母 后面跟由字母或数字 组成的字符串， 例如： "getName2"
     private static final Pattern PATTERN_METHOD_NAME = Pattern.compile("[a-zA-Z][0-9a-zA-Z]*");
 
     /**
      * The rule qualification for <b>path</b>
      */
+    // 匹配由 /，减号，$，句号，下划线，字母和数组 组成的字符串， 例如： "/aa$A.proxy/b-b/cc/dd"
     private static final Pattern PATTERN_PATH = Pattern.compile("[/\\-$._0-9a-zA-Z]+");
 
     /**
      * The pattern matches a value who has a symbol
      */
+    // 匹配由 冒号，星号，逗号，空格，减号，句号，字符和数字 组成的字符串， 例如： "aa,bb:aa_bb:00*bb:aa bb:aa-bb"
     private static final Pattern PATTERN_NAME_HAS_SYMBOL = Pattern.compile("[:*,\\s/\\-._0-9a-zA-Z]+");
 
     /**
      * The pattern matches a property key
      */
+    // 匹配 星号，逗号，减号，句号，下划线，字母和数字 组成的字符串， 例如： "-aa_bb,00*bb"
     private static final Pattern PATTERN_KEY = Pattern.compile("[*,\\-._0-9a-zA-Z]+");
 
     /**
@@ -132,6 +138,8 @@ public abstract class AbstractConfig implements Serializable {
         return value;
     }
 
+    // 举例: AbstractServiceConfig.class 返回  "abstract-service"
+    // StringBuilder.class 返回  "string-builder"
     private static String getTagName(Class<?> cls) {
         String tag = cls.getSimpleName();
         for (String suffix : SUFFIXES) {
@@ -148,55 +156,81 @@ public abstract class AbstractConfig implements Serializable {
     }
 
     @SuppressWarnings("unchecked")
+    // 将参数config对象中的成员变量名字和值, 添加到参数parameters中
+    // (其实就是通过get/is方法获取config对象中的属性值, 再把属性名和属性值放到parameters中, 期间要通过方法上的@Parameter注解对属性值做处理)
+    // 参数parameters中, key是方法对应的属性名, value是该属性的值
     protected static void appendParameters(Map<String, String> parameters, Object config, String prefix) {
         if (config == null) {
             return;
         }
+        // 参数config的所有方法
         Method[] methods = config.getClass().getMethods();
         for (Method method : methods) {
             try {
                 String name = method.getName();
+                // 处理get/is函数, 且返回值是基础的类型
                 if (ClassHelper.isGetter(method)) {
                     Parameter parameter = method.getAnnotation(Parameter.class);
+                    // 方法的返回值为Object.class 或者 方法上Parameter注解中的excluded()为true 则跳过该方法
+                    // 这就是注解加在get方法上, 但实际处理的是成员变量, 这里注解表示不用处理该成员变量
                     if (method.getReturnType() == Object.class || parameter != null && parameter.excluded()) {
                         continue;
                     }
+                    // key是自定义值 或者属性名
                     String key;
+                    // 注解的 key()有值, 则赋给key
                     if (parameter != null && parameter.key().length() > 0) {
                         key = parameter.key();
                     } else {
+                        // 取get方法名中的属性名
                         key = calculatePropertyFromGetter(name);
                     }
+                    // 得到参数config对象调用method后的value值
                     Object value = method.invoke(config);
                     String str = String.valueOf(value).trim();
+                    // 若属性值不空
                     if (value != null && str.length() > 0) {
+                        // 方法上Parameter注解中的escaped()为true, 则encode一下str
                         if (parameter != null && parameter.escaped()) {
                             str = URL.encode(str);
                         }
+                        // 方法上Parameter注解中的append()为true, 则在原来的值后面追加str
                         if (parameter != null && parameter.append()) {
+                            // default.key 在map中是否有值
                             String pre = parameters.get(Constants.DEFAULT_KEY + "." + key);
                             if (pre != null && pre.length() > 0) {
+                                // 给原来的value追加值str, 用逗号隔开
                                 str = pre + "," + str;
                             }
+                            // key 在map中是否有值
                             pre = parameters.get(key);
                             if (pre != null && pre.length() > 0) {
+                                // 给原来的value追加值str, 用逗号隔开
                                 str = pre + "," + str;
                             }
                         }
+                        // 若prefix有值, 需要给key加上前缀
                         if (prefix != null && prefix.length() > 0) {
                             key = prefix + "." + key;
                         }
+                        // put
                         parameters.put(key, str);
                     } else if (parameter != null && parameter.required()) {
+                        // 若调用method后的value值为空, 但方法上Parameter注解中的required()为true, 则抛出异常
+                        // 这个就是属性值要求不能为空, 但你没有赋值, 就抛出异常
                         throw new IllegalStateException(config.getClass().getSimpleName() + "." + key + " == null");
                     }
-                } else if ("getParameters".equals(name)
+                }// 单独处理方法名字是"getParameters", 返回值为map的情况
+                else if ("getParameters".equals(name)
                         && Modifier.isPublic(method.getModifiers())
                         && method.getParameterTypes().length == 0
                         && method.getReturnType() == Map.class) {
+                    // method名字是"getParameters", public, 无参数, 返回值是Map类型
                     Map<String, String> map = (Map<String, String>) method.invoke(config, new Object[0]);
                     if (map != null && map.size() > 0) {
                         String pre = (prefix != null && prefix.length() > 0 ? prefix + "." : "");
+                        // 将map中entry的key 由 "ab-cd" 替换成 "ab.cd"形式, 再加上前缀prefix,  value值不变, 添加到parameters
+                        // parameters的key是属性名, value是属性值
                         for (Map.Entry<String, String> entry : map.entrySet()) {
                             parameters.put(pre + entry.getKey().replace('-', '.'), entry.getValue());
                         }
@@ -335,6 +369,7 @@ public abstract class AbstractConfig implements Serializable {
     }
 
     protected static void checkName(String property, String value) {
+        // 验证参数value的长度和内容是否合法, 不合法直接抛出异常
         checkProperty(property, value, MAX_LENGTH, PATTERN_NAME);
     }
 
@@ -367,6 +402,13 @@ public abstract class AbstractConfig implements Serializable {
         }
     }
 
+    /**
+     * 验证参数value的长度和内容是否合法, 不合法直接抛出异常
+     * @param property log用
+     * @param value 要验证的值
+     * @param maxlength 最大长度
+     * @param pattern 内容的正则
+     */
     protected static void checkProperty(String property, String value, int maxlength, Pattern pattern) {
         if (StringUtils.isEmpty(value)) {
             return;
@@ -376,6 +418,7 @@ public abstract class AbstractConfig implements Serializable {
         }
         if (pattern != null) {
             Matcher matcher = pattern.matcher(value);
+            // value值是否完全匹配
             if (!matcher.matches()) {
                 throw new IllegalStateException("Invalid " + property + "=\"" + value + "\" contains illegal " +
                         "character, only digit, letter, '-', '_' or '.' is legal.");
@@ -409,11 +452,16 @@ public abstract class AbstractConfig implements Serializable {
         return propertyName;
     }
 
+    // 取get方法名中的属性名
+    // 举例: "getRandomPort" 返回 random.port
     private static String calculatePropertyFromGetter(String name) {
         int i = name.startsWith("get") ? 3 : 2;
+        // "randomPort" -> "random.port"
         return StringUtils.camelToSplitName(name.substring(i, i + 1).toLowerCase() + name.substring(i + 1), ".");
     }
 
+    // 返回参数串 "get***/is***"后面的属性名
+    // 举例: "getRandomPort" 返回 randomPort
     private static String calculateAttributeFromGetter(String getter) {
         int i = getter.startsWith("get") ? 3 : 2;
         return getter.substring(i, i + 1).toLowerCase() + getter.substring(i + 1);
@@ -428,12 +476,18 @@ public abstract class AbstractConfig implements Serializable {
         this.id = id;
     }
 
+    // 若id为空, 则把value赋值给它
     public void updateIdIfAbsent(String value) {
         if (StringUtils.isNotEmpty(value) && StringUtils.isEmpty(id)) {
             this.id = value;
         }
     }
 
+    /**
+     * 取注解中的值, 设置本类对象的成员变量
+     * @param annotationClass 注解类的clazz对象
+     * @param annotation 注解类的对象（可以通过类似 Test.class.getAnnotation(TestStatus.class); 获取）
+     */
     protected void appendAnnotation(Class<?> annotationClass, Object annotation) {
         Method[] methods = annotationClass.getMethods();
         for (Method method : methods) {
@@ -442,14 +496,21 @@ public abstract class AbstractConfig implements Serializable {
                     && method.getParameterTypes().length == 0
                     && Modifier.isPublic(method.getModifiers())
                     && !Modifier.isStatic(method.getModifiers())) {
+                // 不是Object类的方法 且 有返回值,没参数, 且 是public,非static 的方法
                 try {
+                    // 获取该method所代表的注解类成员的名字
                     String property = method.getName();
                     if ("interfaceClass".equals(property) || "interfaceName".equals(property)) {
                         property = "interface";
                     }
+                    // 得到一个方法名 "set***"
                     String setter = "set" + property.substring(0, 1).toUpperCase() + property.substring(1);
-                    Object value = method.invoke(annotation);
+
+                    // (认识到 Method对象 和 类的对象是两个独立的东西;
+                    // Method对象可以直接由类的clazz取到, 而不要求必须是通过类的对象实例取到, 但这个取到的Method对象却可以作用于任意的该类的对象实例)
+                    Object value = method.invoke(annotation);// 在annotation对象上,调用method方法, 得到值
                     if (value != null && !value.equals(method.getDefaultValue())) {
+                        // 根据method的返回值类型, 找到set函数
                         Class<?> parameterType = ReflectUtils.getBoxedClass(method.getReturnType());
                         if ("filter".equals(property) || "listener".equals(property)) {
                             parameterType = String.class;
@@ -460,6 +521,7 @@ public abstract class AbstractConfig implements Serializable {
                         }
                         try {
                             Method setterMethod = getClass().getMethod(setter, parameterType);
+                            // 调用本类对象的set方法, 将value值设置进去
                             setterMethod.invoke(this, value);
                         } catch (NoSuchMethodException e) {
                             // ignore
@@ -481,16 +543,21 @@ public abstract class AbstractConfig implements Serializable {
      * <p>
      * Notice! This method should include all properties in the returning map, treat @Parameter differently compared to appendParameters.
      */
+    // 返回的map, key是方法对应的属性名, value是该属性的值 (处理的都是当前对象的成员变量的get方法)
     public Map<String, String> getMetaData() {
         Map<String, String> metaData = new HashMap<>();
+        // 取当前类的所有方法
         Method[] methods = this.getClass().getMethods();
         for (Method method : methods) {
             try {
                 String name = method.getName();
+                // 处理返回值为基础类型的方法,  且是取成员变量的get/is方法
                 if (isMetaMethod(method)) {
+                    // 得到属性名
                     String prop = calculateAttributeFromGetter(name);
                     String key;
                     Parameter parameter = method.getAnnotation(Parameter.class);
+                    // 若方法上Parameter注解中的key()有值 且 useKeyAsProperty()值为true, 则把key赋值为key()
                     if (parameter != null && parameter.key().length() > 0 && parameter.useKeyAsProperty()) {
                         key = parameter.key();
                     } else {
@@ -502,6 +569,7 @@ public abstract class AbstractConfig implements Serializable {
                         metaData.put(key, null);
                         continue;
                     }
+                    // 得到当前对象调用method后的value值, 并将key和value放入map
                     Object value = method.invoke(this);
                     String str = String.valueOf(value).trim();
                     if (value != null && str.length() > 0) {
@@ -509,14 +577,18 @@ public abstract class AbstractConfig implements Serializable {
                     } else {
                         metaData.put(key, null);
                     }
-                } else if ("getParameters".equals(name)
+                }// 单独处理方法名字是"getParameters", 返回值为map的情况
+                else if ("getParameters".equals(name)
                         && Modifier.isPublic(method.getModifiers())
                         && method.getParameterTypes().length == 0
                         && method.getReturnType() == Map.class) {
+                    // method名字是"getParameters", public, 无参数, 返回值是Map类型
                     Map<String, String> map = (Map<String, String>) method.invoke(this, new Object[0]);
                     if (map != null && map.size() > 0) {
 //                            String pre = (prefix != null && prefix.length() > 0 ? prefix + "." : "");
                         for (Map.Entry<String, String> entry : map.entrySet()) {
+                            // 将map中entry的key 由 "ab-cd" 替换成 "ab.cd"形式, value值不变, 添加到metaData
+                            // metaData的key是属性名, value是属性值
                             metaData.put(entry.getKey().replace('-', '.'), entry.getValue());
                         }
                     }
@@ -530,6 +602,7 @@ public abstract class AbstractConfig implements Serializable {
 
     @Parameter(excluded = true)
     public String getPrefix() {
+        // prefix不空则返回prefix, 否则返回"dubbo.service"
         return StringUtils.isNotEmpty(prefix) ? prefix : (Constants.DUBBO + "." + getTagName(this.getClass()));
     }
 
@@ -577,18 +650,26 @@ public abstract class AbstractConfig implements Serializable {
     }
 
     @Override
+    // 返回字符串 "<dubbo:service randomPort="8080" exported="true" />"
     public String toString() {
         try {
+            // 举例: 当this=ServiceConfig对象时
             StringBuilder buf = new StringBuilder();
             buf.append("<dubbo:");
+            // "service"
             buf.append(getTagName(getClass()));
+            // 处理当前类中的所有方法
             Method[] methods = getClass().getMethods();
             for (Method method : methods) {
                 try {
+                    // 是否是get/is函数
                     if (ClassHelper.isGetter(method)) {
+                        // "getRandomPort"
                         String name = method.getName();
+                        // "randomPort"
                         String key = calculateAttributeFromGetter(name);
                         Object value = method.invoke(this);
+                        // randomPort="8080"
                         if (value != null) {
                             buf.append(" ");
                             buf.append(key);
@@ -617,23 +698,30 @@ public abstract class AbstractConfig implements Serializable {
         return true;
     }
 
+    // 参数method是否是取成员变量的函数 (get/is )
     private boolean isMetaMethod(Method method) {
         String name = method.getName();
+        // method名字不以 get/is开头, 返回false
         if (!(name.startsWith("get") || name.startsWith("is"))) {
             return false;
         }
+        // method名字只是"get", 返回false
         if ("get".equals(name)) {
             return false;
         }
+        // method名字只是"getClass", 返回false
         if ("getClass".equals(name)) {
             return false;
         }
+        // method不是public, 返回false
         if (!Modifier.isPublic(method.getModifiers())) {
             return false;
         }
+        // method有参数, 返回false
         if (method.getParameterTypes().length != 0) {
             return false;
         }
+        // method返回值不是基本类型, 返回false
         if (!ClassHelper.isPrimitive(method.getReturnType())) {
             return false;
         }
@@ -641,20 +729,29 @@ public abstract class AbstractConfig implements Serializable {
     }
 
     @Override
+    // 比较参数obj和this, 若get方法返回值相同, 则返回true
+    // 其实比较的是两个同类的对象的成员变量值是否相同
     public boolean equals(Object obj) {
+        // obj和this是同一个类的对象, 否则返回false
         if (obj == null || !(obj.getClass().getName().equals(this.getClass().getName()))) {
             return false;
         }
 
+        // 取public方法
         Method[] methods = this.getClass().getMethods();
         for (Method method1 : methods) {
+            // method1是get方法 且 返回类型是基础的类型
+            // (只比较obj和this对象 在调用get方法后, 得到的值是否相同, 其实比较的是两个对象的成员变量值是否相同)
             if (ClassHelper.isGetter(method1) && ClassHelper.isPrimitive(method1.getReturnType())) {
                 Parameter parameter = method1.getAnnotation(Parameter.class);
+                // 若方法上的parameter注解的excluded()值为true, 则不进行比较
                 if (parameter != null && parameter.excluded()) {
                     continue;
                 }
                 try {
+                    // 对同一个方法, obj和this执行的结果是否相同, 若不同则返回false
                     Method method2 = obj.getClass().getMethod(method1.getName(), method1.getParameterTypes());
+                    // 等同于调用 method1.invoke(this); 因为get方法没有参数
                     Object value1 = method1.invoke(this, new Object[]{});
                     Object value2 = method2.invoke(obj, new Object[]{});
                     if ((value1 != null && value2 != null) && !value1.equals(value2)) {
