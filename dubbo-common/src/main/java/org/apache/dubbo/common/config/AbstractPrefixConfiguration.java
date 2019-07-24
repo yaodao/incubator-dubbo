@@ -25,6 +25,7 @@ public abstract class AbstractPrefixConfiguration implements Configuration {
     protected String id;
     protected String prefix;
 
+    // 给当前对象的 id和prefix赋值, prefix末尾需要带 "."
     public AbstractPrefixConfiguration(String prefix, String id) {
         super();
         if (StringUtils.isNotEmpty(prefix) && !prefix.endsWith(".")) {

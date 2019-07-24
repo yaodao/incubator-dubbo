@@ -149,17 +149,21 @@ public class ConfigUtils {
         return sb.toString();
     }
 
+    // 加载path文件的内容到PROPERTIES
     public static Properties getProperties() {
         if (PROPERTIES == null) {
             synchronized (ConfigUtils.class) {
                 if (PROPERTIES == null) {
+                    // 从系统环境中取文件路径
                     String path = System.getProperty(Constants.DUBBO_PROPERTIES_KEY);
                     if (path == null || path.length() == 0) {
                         path = System.getenv(Constants.DUBBO_PROPERTIES_KEY);
                         if (path == null || path.length() == 0) {
+                            // 取不到, 则赋值为 "dubbo.properties"
                             path = Constants.DEFAULT_DUBBO_PROPERTIES;
                         }
                     }
+                    // 加载path文件的内容到Properties对象
                     PROPERTIES = ConfigUtils.loadProperties(path, false, true);
                 }
             }
@@ -177,11 +181,13 @@ public class ConfigUtils {
         }
     }
 
+    // 取key配置的属性值, 先从从系统环境中取, 若没取到再从配置文件中取
     public static String getProperty(String key) {
         return getProperty(key, null);
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
+    // 取key对应的配置的属性值 (先从从系统环境中取, 若没取到再从配置文件中取)
     public static String getProperty(String key, String defaultValue) {
         String value = System.getProperty(key);
         if (value != null && value.length() > 0) {

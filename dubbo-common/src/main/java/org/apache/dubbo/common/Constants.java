@@ -229,6 +229,8 @@ public class Constants {
 
     public static final String DEFAULT_REGISTRY = "dubbo";
 
+    //  backup 值类似 "zkserver2.vko.cn:2181,zkserver3.vko.cn:2181"
+    //  完整配置串是 "zookeeper.address=zookeeper://zkserver1.vko.cn:2181?backup=zkserver2.vko.cn:2181,zkserver3.vko.cn:2181"
     public static final String BACKUP_KEY = "backup";
 
     public static final String DIRECTORY_KEY = "directory";

@@ -27,6 +27,7 @@ public class InmemoryConfiguration extends AbstractPrefixConfiguration {
     // stores the configuration key-value pairs
     private Map<String, String> store = new LinkedHashMap<>();
 
+    // 给当前对象的 id和prefix赋值, prefix末尾需要带 "."
     public InmemoryConfiguration(String prefix, String id) {
         super(prefix, id);
     }

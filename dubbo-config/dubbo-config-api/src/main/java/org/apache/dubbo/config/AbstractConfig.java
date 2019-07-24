@@ -142,7 +142,7 @@ public abstract class AbstractConfig implements Serializable {
     // StringBuilder.class 返回  "string-builder"
     private static String getTagName(Class<?> cls) {
         String tag = cls.getSimpleName();
-        for (String suffix : SUFFIXES) {
+        for (String suffix : SUFFIXES) { //  SUFFIXES {"Config", "Bean"};
             if (tag.endsWith(suffix)) {
                 tag = tag.substring(0, tag.length() - suffix.length());
                 break;
@@ -246,20 +246,26 @@ public abstract class AbstractConfig implements Serializable {
         appendAttributes(parameters, config, null);
     }
 
+    // 将参数config对象中的 get方法所对应的属性名和属性值 添加到参数parameters中
+    // get方法是config对象中的所有带@Parameter注解的get方法,
     protected static void appendAttributes(Map<String, Object> parameters, Object config, String prefix) {
         if (config == null) {
             return;
         }
+        // 参数config对象的所有public方法
         Method[] methods = config.getClass().getMethods();
         for (Method method : methods) {
             try {
                 Parameter parameter = method.getAnnotation(Parameter.class);
                 if (parameter == null || !parameter.attribute()) {
+                    // 方法上不带@Parameter注解 或者 注解的attribute()值为false, 则直接跳过
                     continue;
                 }
                 String name = method.getName();
+                // 是get方法
                 if (ClassHelper.isGetter(method)) {
                     String key;
+                    // 若@Parameter注解key()有值, 则key赋值为key();
                     if (parameter.key().length() > 0) {
                         key = parameter.key();
                     } else {
@@ -268,8 +274,10 @@ public abstract class AbstractConfig implements Serializable {
                     Object value = method.invoke(config);
                     if (value != null) {
                         if (prefix != null && prefix.length() > 0) {
+                            // 若参数prefix不空, 则key赋值为 prefix + "." + key
                             key = prefix + "." + key;
                         }
+                        // 将属性名和属性值 添加到参数parameters中
                         parameters.put(key, value);
                     }
                 }
@@ -317,6 +325,7 @@ public abstract class AbstractConfig implements Serializable {
         return asyncMethodInfo;
     }
 
+    // 根据方法签名 在clazz中取该签名对应的方法对象
     private static Method getMethodByName(Class<?> clazz, String methodName) {
         try {
             return ReflectUtils.findMethodByMethodName(clazz, methodName);
@@ -342,9 +351,12 @@ public abstract class AbstractConfig implements Serializable {
      * @param property The extension key
      * @param value    The Extension name
      */
+    // 查看是否有value对应的clazz对象, value是以逗号分开多个名字的串, 没有会抛出异常
     protected static void checkMultiExtension(Class<?> type, String property, String value) {
+        // 检验value值是否合理
         checkMultiName(property, value);
         if (StringUtils.isNotEmpty(value)) {
+            // 逗号分开
             String[] values = value.split("\\s*[,]+\\s*");
             for (String v : values) {
                 if (v.startsWith(Constants.REMOVE_VALUE_PREFIX)) {
@@ -353,6 +365,7 @@ public abstract class AbstractConfig implements Serializable {
                 if (Constants.DEFAULT_KEY.equals(v)) {
                     continue;
                 }
+                // 是否有v这个名字对应的clazz对象, 没有就抛出异常
                 if (!ExtensionLoader.getExtensionLoader(type).hasExtension(v)) {
                     throw new IllegalStateException("No such extension " + v + " for " + property + "/" + type.getName());
                 }
@@ -374,6 +387,8 @@ public abstract class AbstractConfig implements Serializable {
     }
 
     protected static void checkNameHasSymbol(String property, String value) {
+        // 验证参数value的长度<=MAX_LENGTH 内容是否符合正则PATTERN_NAME_HAS_SYMBOL,
+        // 不合法直接抛出异常
         checkProperty(property, value, MAX_LENGTH, PATTERN_NAME_HAS_SYMBOL);
     }
 
@@ -382,6 +397,8 @@ public abstract class AbstractConfig implements Serializable {
     }
 
     protected static void checkMultiName(String property, String value) {
+        // 验证参数value的长度<=MAX_LENGTH 内容是否符合正则PATTERN_MULTI_NAME
+        // 不合法直接抛出异常
         checkProperty(property, value, MAX_LENGTH, PATTERN_MULTI_NAME);
     }
 
@@ -393,6 +410,7 @@ public abstract class AbstractConfig implements Serializable {
         checkProperty(property, value, MAX_LENGTH, PATTERN_METHOD_NAME);
     }
 
+    // 检验map中的key和value是否满足条件, 不满足条件直接抛出异常
     protected static void checkParameterName(Map<String, String> parameters) {
         if (CollectionUtils.isEmptyMap(parameters)) {
             return;
@@ -404,7 +422,7 @@ public abstract class AbstractConfig implements Serializable {
 
     /**
      * 验证参数value的长度和内容是否合法, 不合法直接抛出异常
-     * @param property log用
+     * @param property 记录log用
      * @param value 要验证的值
      * @param maxlength 最大长度
      * @param pattern 内容的正则
@@ -426,6 +444,7 @@ public abstract class AbstractConfig implements Serializable {
         }
     }
 
+    // 将参数map的每个key去掉前缀prefix, 放到set中返回
     protected static Set<String> getSubProperties(Map<String, String> properties, String prefix) {
         return properties.keySet().stream().filter(k -> k.contains(prefix)).map(k -> {
             k = k.substring(prefix.length());
@@ -433,8 +452,9 @@ public abstract class AbstractConfig implements Serializable {
         }).collect(Collectors.toSet());
     }
 
-    // 根据setter方法, 取getter方法上@Parameter注解里的属性名
-    // （getter方法上有@Parameter注解，可以为属性取别名，所以最后返回的属性名可以是实际的属性名，也可以是属性的别名, 取决于@Parameter注解里的配置）
+    // 返回@Parameter注解中的key()值 或者setter方法的属性名
+    // 若@Parameter注解中的key()有值且useKeyAsProperty()为true, 则返回key()值, 否则返回setter方法的属性名
+    // （@Parameter注解是在getter方法上，可以为属性取别名，所以最后返回的属性名可以是实际的属性名，也可以是属性的别名, 取决于@Parameter注解里的配置）
     private static String extractPropertyName(Class<?> clazz, Method setter) throws Exception {
         String propertyName = setter.getName().substring("set".length());
         Method getter = null;
@@ -546,7 +566,7 @@ public abstract class AbstractConfig implements Serializable {
     // 返回的map, key是方法对应的属性名, value是该属性的值 (处理的都是当前对象的成员变量的get方法)
     public Map<String, String> getMetaData() {
         Map<String, String> metaData = new HashMap<>();
-        // 取当前类的所有方法
+        // 取clazz的所有public方法
         Method[] methods = this.getClass().getMethods();
         for (Method method : methods) {
             try {
@@ -557,7 +577,7 @@ public abstract class AbstractConfig implements Serializable {
                     String prop = calculateAttributeFromGetter(name);
                     String key;
                     Parameter parameter = method.getAnnotation(Parameter.class);
-                    // 若方法上Parameter注解中的key()有值 且 useKeyAsProperty()值为true, 则把key赋值为key()
+                    // 若方法上Parameter注解中的key()有值 且 useKeyAsProperty()值为true, 则key赋值为key()
                     if (parameter != null && parameter.key().length() > 0 && parameter.useKeyAsProperty()) {
                         key = parameter.key();
                     } else {
@@ -602,7 +622,7 @@ public abstract class AbstractConfig implements Serializable {
 
     @Parameter(excluded = true)
     public String getPrefix() {
-        // prefix不空则返回prefix, 否则返回"dubbo.service"
+        // prefix不空则返回prefix, 否则返回"dubbo.abstract-service"
         return StringUtils.isNotEmpty(prefix) ? prefix : (Constants.DUBBO + "." + getTagName(this.getClass()));
     }
 
@@ -614,13 +634,17 @@ public abstract class AbstractConfig implements Serializable {
      * TODO: Currently, only support overriding of properties explicitly defined in Config class, doesn't support
      * overriding of customized parameters stored in 'parameters'.
      */
+    // 更新当前Config对象的属性值, 使用compositeConfiguration对象中的值
     public void refresh() {
         try {
+            // 填充compositeConfiguration
             CompositeConfiguration compositeConfiguration = Environment.getInstance().getConfiguration(getPrefix(), getId());
             InmemoryConfiguration config = new InmemoryConfiguration(getPrefix(), getId());
+            // 添加当前对象的成员变量的(名, 值)对 到InmemoryConfiguration对象的成员变量store中
             config.addProperties(getMetaData());
             if (Environment.getInstance().isConfigCenterFirst()) {
                 // The sequence would be: SystemConfiguration -> AppExternalConfiguration -> ExternalConfiguration -> AbstractConfig -> PropertiesConfiguration
+                // config就是上条注释中的AbstractConfig
                 compositeConfiguration.addConfiguration(3, config);
             } else {
                 // The sequence would be: SystemConfiguration -> AbstractConfig -> AppExternalConfiguration -> ExternalConfiguration -> PropertiesConfiguration
@@ -628,12 +652,16 @@ public abstract class AbstractConfig implements Serializable {
             }
 
             // loop methods, get override value and set the new value back to method
+            // 通过当前类中set方法获得属性名, 使用属性名对应的配置值, 重新设置当前对象的该属性值
             Method[] methods = getClass().getMethods();
             for (Method method : methods) {
+                // method是set方法
                 if (ClassHelper.isSetter(method)) {
                     try {
+                        // 取method的属性名 对应的配置值 (取配置值是重点)
                         String value = StringUtils.trim(compositeConfiguration.getString(extractPropertyName(getClass(), method)));
                         // isTypeMatch() is called to avoid duplicate and incorrect update, for example, we have two 'setGeneric' methods in ReferenceConfig.
+                        // 若type类型和value值能对应上, 则设置当前对象的属性值
                         if (StringUtils.isNotEmpty(value) && ClassHelper.isTypeMatch(method.getParameterTypes()[0], value)) {
                             method.invoke(this, ClassHelper.convertPrimitive(method.getParameterTypes()[0], value));
                         }

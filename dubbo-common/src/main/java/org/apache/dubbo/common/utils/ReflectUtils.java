@@ -119,8 +119,10 @@ public final class ReflectUtils {
 
     private static final ConcurrentMap<String, Class<?>> DESC_CLASS_CACHE = new ConcurrentHashMap<String, Class<?>>();
 
+    // name是元素的类型的名字, value是该类型的clazz对象
     private static final ConcurrentMap<String, Class<?>> NAME_CLASS_CACHE = new ConcurrentHashMap<String, Class<?>>();
 
+    // key是方法签名, value是方法对象
     private static final ConcurrentMap<String, Method> Signature_METHODS_CACHE = new ConcurrentHashMap<String, Method>();
 
     private ReflectUtils() {
@@ -698,6 +700,7 @@ public final class ReflectUtils {
      * @param name name.
      * @return Class instance.
      */
+    // 由name得到该name对应的clazz对象
     public static Class<?> name2class(String name) throws ClassNotFoundException {
         return name2class(ClassHelper.getClassLoader(), name);
     }
@@ -711,18 +714,29 @@ public final class ReflectUtils {
      * @param name name.
      * @return Class instance.
      */
+    // 由name得到该name对应的clazz对象 (name是 clazz.getName()的值, 数组类型的name 后面的串可以是"[][]" 或者"[[")
+    // 这个函数也说明了以下几点,
+    // 基本类型的clazz对象是系统自带的, 可以直接返回,
+    // 基本类型的数组的clazz对象, 需要手动加载
+    // 高级类型和自定义类型的clazz对象 需要手动加载
+    // 举例: "int[][]"
     private static Class<?> name2class(ClassLoader cl, String name) throws ClassNotFoundException {
         int c = 0, index = name.indexOf('[');
         if (index > 0) {
+            // c是括号的数量(就是有几对括号)
             c = (name.length() - index) / 2;
+            // name="int"
             name = name.substring(0, index);
         }
+        // 参数name中有括号
         if (c > 0) {
             StringBuilder sb = new StringBuilder();
+            // "[["
             while (c-- > 0) {
                 sb.append("[");
             }
 
+            // 当name是表示基本类型的字符串, sb追加上基本类型的缩写
             if ("void".equals(name)) {
                 sb.append(JVM_VOID);
             } else if ("boolean".equals(name)) {
@@ -746,6 +760,8 @@ public final class ReflectUtils {
             }
             name = sb.toString();
         } else {
+            // 参数name中没有括号,
+            // 当name是表示基本类型的字符串, sb追加上基本类型的缩写
             if ("void".equals(name)) {
                 return void.class;
             } else if ("boolean".equals(name)) {
@@ -767,12 +783,16 @@ public final class ReflectUtils {
             }
         }
 
+        // 当name不是表示基本类型的字符串, name是数组或者其他高级类型的名字
+
         if (cl == null) {
             cl = ClassHelper.getClassLoader();
         }
         Class<?> clazz = NAME_CLASS_CACHE.get(name);
         if (clazz == null) {
+            // 加载并初始化该clazz
             clazz = Class.forName(name, true, cl);
+            // name是元素的类型的名字, value是该类型的clazz对象
             NAME_CLASS_CACHE.put(name, clazz);
         }
         return clazz;
@@ -885,23 +905,32 @@ public final class ReflectUtils {
      * @throws ClassNotFoundException
      * @throws IllegalStateException  when multiple methods are found (overridden method when parameter info is not provided)
      */
+    // 根据方法签名 取方法对象
+    // 本函数依次根据三个条件来找对应的method对象: 方法签名, 方法名, 方法名和方法的参数类型
     public static Method findMethodByMethodSignature(Class<?> clazz, String methodName, String[] parameterTypes)
             throws NoSuchMethodException, ClassNotFoundException {
+        // signature串类似: "com.its.test.Person.show"
         String signature = clazz.getName() + "." + methodName;
         if (parameterTypes != null && parameterTypes.length > 0) {
+            // 若parameterTypes有值, 则signature串类似: "com.its.test.Person.showjava.lang.String"
             signature += StringUtils.join(parameterTypes);
         }
+        // 通过方法签名从缓存中取方法对象
         Method method = Signature_METHODS_CACHE.get(signature);
         if (method != null) {
             return method;
         }
+        // 缓存没有
+        // 若parameterTypes为空, 表示要找的方法没有参数, 按方法名字从clazz的所有方法里找
         if (parameterTypes == null) {
             List<Method> finded = new ArrayList<Method>();
             for (Method m : clazz.getMethods()) {
+                // 方法名字相同则添加到list
                 if (m.getName().equals(methodName)) {
                     finded.add(m);
                 }
             }
+            // 找不到抛异常
             if (finded.isEmpty()) {
                 throw new NoSuchMethodException("No such method " + methodName + " in class " + clazz);
             }
@@ -912,10 +941,13 @@ public final class ReflectUtils {
             }
             method = finded.get(0);
         } else {
+            // 若parameterTypes有值, 表示要找的方法带参数, 根据方法名字和参数类型在clazz的所有方法里面找
             Class<?>[] types = new Class<?>[parameterTypes.length];
             for (int i = 0; i < parameterTypes.length; i++) {
+                // 由name得到该name对应的clazz对象
                 types[i] = ReflectUtils.name2class(parameterTypes[i]);
             }
+            // 根据名字和参数取clazz的方法
             method = clazz.getMethod(methodName, types);
 
         }
@@ -923,8 +955,10 @@ public final class ReflectUtils {
         return method;
     }
 
+    // 根据方法签名 在clazz中取该签名对应的方法对象
     public static Method findMethodByMethodName(Class<?> clazz, String methodName)
             throws NoSuchMethodException, ClassNotFoundException {
+        // 根据方法签名 在clazz中取该签名对应的方法对象
         return findMethodByMethodSignature(clazz, methodName, null);
     }
 

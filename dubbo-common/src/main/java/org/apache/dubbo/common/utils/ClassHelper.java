@@ -224,6 +224,8 @@ public class ClassHelper {
 
     }
 
+    // 取clazz的类名
+    // 例如: java.lang.String 返回 String
     public static String simpleClassName(Class<?> clazz) {
         if (clazz == null) {
             throw new NullPointerException("clazz");
@@ -236,6 +238,8 @@ public class ClassHelper {
         return className;
     }
 
+    // 方法名是否以set开头
+    // 方法名以set开头, pulic, 参数只有一个, 参数是基础的类型, 返回true
     public static boolean isSetter(Method method) {
         return method.getName().startsWith("set")
                 && !"set".equals(method.getName())
@@ -273,10 +277,12 @@ public class ClassHelper {
                 || type == Object.class;
     }
 
+    // 将value转成type类型的对象 (若type不是8种基本类型, 则直接返回value)
     public static Object convertPrimitive(Class<?> type, String value) {
         if (value == null) {
             return null;
-        } else if (type == char.class || type == Character.class) {
+        } // 若type是char类型, 则只取value的第一个字符返回
+        else if (type == char.class || type == Character.class) {
             return value.length() > 0 ? value.charAt(0) : '\0';
         } else if (type == boolean.class || type == Boolean.class) {
             return Boolean.valueOf(value);
@@ -309,6 +315,9 @@ public class ClassHelper {
      * @param value
      * @return
      */
+    // 判断type类型和value值是否能对应上
+    // 例如： type若是boolean类型,则value必须是字符串"true"或"false", 否则返回false
+    // 对type是其他类型 暂时不作要求 (type若不是boolean类型, 直接返回true)
     public static boolean isTypeMatch(Class<?> type, String value) {
         if ((type == boolean.class || type == Boolean.class)
                 && !("true".equals(value) || "false".equals(value))) {

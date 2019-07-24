@@ -67,6 +67,8 @@ public class ConfigurationUtils {
         return StringUtils.trim(Environment.getInstance().getConfiguration().getString(property, defaultValue));
     }
 
+    // 将content中的内容通过Properties 转成map
+    // 例如: String content = "aaa=bbb\nccc=ddd", 得到的map有两个entry (aaa, bbb)(ccc, ddd)
     public static Map<String, String> parseProperties(String content) throws IOException {
         Map<String, String> map = new HashMap<>();
         if (StringUtils.isEmpty(content)) {

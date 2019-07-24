@@ -38,8 +38,10 @@ public class HashedWheelTimerTest {
     @Test
     public void newTimeout() throws InterruptedException {
         final Timer timer = newTimer();
+        final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         for (int i = 0; i < 10; i++) {
-            timer.newTimeout(new PrintTask(), 1, TimeUnit.SECONDS);
+            System.out.println("begin :" + LocalDateTime.now().format(formatter));
+            timer.newTimeout(new PrintTask(), 3, TimeUnit.SECONDS);
             Thread.sleep(1000);
         }
         Thread.sleep(5000);

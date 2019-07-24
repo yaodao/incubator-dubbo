@@ -784,6 +784,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 setConfigCenter(provider.getConfigCenter());
             }
         }
+        // module不为空, 则用module中的值给registries和monitor赋值
         if (module != null) {
             if (registries == null) {
                 setRegistries(module.getRegistries());
@@ -792,6 +793,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 setMonitor(module.getMonitor());
             }
         }
+        // application不为空, 则用application中的值给registries和monitor赋值
         if (application != null) {
             if (registries == null) {
                 setRegistries(application.getRegistries());

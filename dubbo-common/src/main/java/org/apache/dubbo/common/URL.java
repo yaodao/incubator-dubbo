@@ -407,10 +407,13 @@ class URL implements Serializable {
         return port <= 0 ? defaultPort : port;
     }
 
+    // 就是判断port值是否合法
+    // port值合法返回"host:port", 不合法就只返回 host
     public String getAddress() {
         return port <= 0 ? host : host + ":" + port;
     }
 
+    // 从参数address中提取出host和port, 赋值给成员变量host和port
     public URL setAddress(String address) {
         int i = address.lastIndexOf(':');
         String host;
@@ -428,8 +431,16 @@ class URL implements Serializable {
         return getBackupAddress(0);
     }
 
+    /**
+     * 得到zk的所有地址串, 包括主要地址和备用地址, 不同地址间用逗号分隔
+     * url中的参数类似 "zookeeper.address=zookeeper://zkserver1.vko.cn:2181?backup=zkserver2.vko.cn:2181,zkserver3.vko.cn:2181"
+     * @param defaultPort
+     * @return
+     */
     public String getBackupAddress(int defaultPort) {
+        // 得到zk主要地址 "zkserver1.vko.cn:2181"
         StringBuilder address = new StringBuilder(appendDefaultPort(getAddress(), defaultPort));
+        // 返回zk的备用地址数组 ["zkserver2.vko.cn:2181", "zkserver3.vko.cn:2181"]
         String[] backups = getParameter(Constants.BACKUP_KEY, new String[0]);
         if (ArrayUtils.isNotEmpty(backups)) {
             for (String backup : backups) {
@@ -437,6 +448,7 @@ class URL implements Serializable {
                 address.append(appendDefaultPort(backup, defaultPort));
             }
         }
+        // 最后得到串 "zkserver1.vko.cn:2181,zkserver2.vko.cn:2181,zkserver3.vko.cn:2181"
         return address.toString();
     }
 
@@ -452,6 +464,8 @@ class URL implements Serializable {
         return urls;
     }
 
+    // 若参数address中没有port, 或者port=0, 则返回 "address:defaultPort".
+    // 否则 说明参数address带端口号, 则原样返回参数address
     static String appendDefaultPort(String address, int defaultPort) {
         if (address != null && address.length() > 0 && defaultPort > 0) {
             int i = address.indexOf(':');
@@ -510,19 +524,27 @@ class URL implements Serializable {
         return value;
     }
 
+    // 从成员变量parameters中, 取key对应的value值, 若value为空, 返回参数defaultValue
+    // 举例: 串"backup=zkserver2.vko.cn:2181,zkserver3.vko.cn:2181"
+    // 当key="backup" 返回值 为 ["zkserver2.vko.cn:2181", "zkserver3.vko.cn:2181"]
     public String[] getParameter(String key, String[] defaultValue) {
+        // 从成员变量parameters中, 取key对应的value值
         String value = getParameter(key);
         if (StringUtils.isEmpty(value)) {
             return defaultValue;
         }
+        // 将逗号分隔的字符串转成字符串数组返回
         return Constants.COMMA_SPLIT_PATTERN.split(value);
     }
 
+    // 从成员变量parameters中, 取key对应的value值, 并分隔成数组返回
     public List<String> getParameter(String key, List<String> defaultValue) {
+        // 从成员变量parameters中, 取key对应的value值
         String value = getParameter(key);
         if (value == null || value.length() == 0) {
             return defaultValue;
         }
+        // 使用逗号分隔value值成为数组
         String[] strArray = Constants.COMMA_SPLIT_PATTERN.split(value);
         return Arrays.asList(strArray);
     }
@@ -1514,10 +1536,13 @@ class URL implements Serializable {
         if (obj == null) {
             return false;
         }
+        // this和obj所属类相同
         if (getClass() != obj.getClass()) {
             return false;
         }
+        // 需要比较this和obj的以下属性值
         URL other = (URL) obj;
+        // 比较host
         if (host == null) {
             if (other.host != null) {
                 return false;
@@ -1525,13 +1550,16 @@ class URL implements Serializable {
         } else if (!host.equals(other.host)) {
             return false;
         }
+        // 比较parameters
         if (parameters == null) {
             if (other.parameters != null) {
                 return false;
             }
-        } else if (!parameters.equals(other.parameters)) {
+        } // 只有两个map中的key和value都相同时才true.  两个map竟然可以这样直接比较是否相等
+        else if (!parameters.equals(other.parameters)) {
             return false;
         }
+        // 比较password
         if (password == null) {
             if (other.password != null) {
                 return false;
@@ -1539,6 +1567,7 @@ class URL implements Serializable {
         } else if (!password.equals(other.password)) {
             return false;
         }
+        // 比较path
         if (path == null) {
             if (other.path != null) {
                 return false;
@@ -1546,9 +1575,11 @@ class URL implements Serializable {
         } else if (!path.equals(other.path)) {
             return false;
         }
+        // 比较port
         if (port != other.port) {
             return false;
         }
+        // 比较protocol
         if (protocol == null) {
             if (other.protocol != null) {
                 return false;
@@ -1556,6 +1587,7 @@ class URL implements Serializable {
         } else if (!protocol.equals(other.protocol)) {
             return false;
         }
+        // 比较username
         if (username == null) {
             if (other.username != null) {
                 return false;

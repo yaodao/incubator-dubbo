@@ -621,6 +621,7 @@ public final class StringUtils {
      * @param array String array.
      * @return String.
      */
+    // 把参数array中的元素直接连接起来, 没有分隔符
     public static String join(String[] array) {
         if (ArrayUtils.isEmpty(array)) {
             return EMPTY;

@@ -30,9 +30,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Environment {
     private static final Environment INSTANCE = new Environment();
 
+    // key是 prefix+id+"."  value是一个Configuration类型的对象, 下面的一样
     private Map<String, PropertiesConfiguration> propertiesConfigs = new ConcurrentHashMap<>();
     private Map<String, SystemConfiguration> systemConfigs = new ConcurrentHashMap<>();
     private Map<String, EnvironmentConfiguration> environmentConfigs = new ConcurrentHashMap<>();
+    // key是prefix+id+"."  value是InmemoryConfiguration对象)
     private Map<String, InmemoryConfiguration> externalConfigs = new ConcurrentHashMap<>();
     private Map<String, InmemoryConfiguration> appExternalConfigs = new ConcurrentHashMap<>();
 
@@ -50,25 +52,31 @@ public class Environment {
         return INSTANCE;
     }
 
+    // 将 (key=prefix+id+"."  value=SystemConfiguration) 放到propertiesConfigs中, 并返回PropertiesConfiguration对象
     public PropertiesConfiguration getPropertiesConfig(String prefix, String id) {
         return propertiesConfigs.computeIfAbsent(toKey(prefix, id), k -> new PropertiesConfiguration(prefix, id));
     }
 
+    // 将 (key=prefix+id+"."  value=SystemConfiguration) 放到systemConfigs中, 并返回SystemConfiguration对象
     public SystemConfiguration getSystemConfig(String prefix, String id) {
         return systemConfigs.computeIfAbsent(toKey(prefix, id), k -> new SystemConfiguration(prefix, id));
     }
 
+    // 将 (key=prefix+id+"."  value=InmemoryConfiguration对象) 放到externalConfigs中, 并返回InmemoryConfiguration对象
     public InmemoryConfiguration getExternalConfig(String prefix, String id) {
         return externalConfigs.computeIfAbsent(toKey(prefix, id), k -> {
             InmemoryConfiguration configuration = new InmemoryConfiguration(prefix, id);
+            // 设置InmemoryConfiguration对象的成员变量store值
             configuration.setProperties(externalConfigurationMap);
             return configuration;
         });
     }
 
+    // 将 (key=prefix+id+"."  value=InmemoryConfiguration对象) 放到appExternalConfigs中, 并返回InmemoryConfiguration对象
     public InmemoryConfiguration getAppExternalConfig(String prefix, String id) {
         return appExternalConfigs.computeIfAbsent(toKey(prefix, id), k -> {
             InmemoryConfiguration configuration = new InmemoryConfiguration(prefix, id);
+            // 设置InmemoryConfiguration对象的成员变量store值
             configuration.setProperties(appExternalConfigurationMap);
             return configuration;
         });
@@ -94,10 +102,12 @@ public class Environment {
         return appExternalConfigurationMap;
     }
 
+    // 将参数map中的所有entry添加到externalConfigurationMap中
     public void updateExternalConfigurationMap(Map<String, String> externalMap) {
         this.externalConfigurationMap.putAll(externalMap);
     }
 
+    // 将参数map中的所有entry添加到appExternalConfigurationMap中
     public void updateAppExternalConfigurationMap(Map<String, String> externalMap) {
         this.appExternalConfigurationMap.putAll(externalMap);
     }
@@ -111,12 +121,16 @@ public class Environment {
      * @param id
      * @return
      */
+    // 新生成一个CompositeConfiguration对象, 将各种Configuration对象添加到它的configList中, 返回该对象
     public CompositeConfiguration getConfiguration(String prefix, String id) {
         CompositeConfiguration compositeConfiguration = new CompositeConfiguration();
         // Config center has the highest priority
         compositeConfiguration.addConfiguration(this.getSystemConfig(prefix, id));
+        // 添加一个InmemoryConfiguration对象, 该InmemoryConfiguration对象的store属性值为本类的成员变量appExternalConfigurationMap
         compositeConfiguration.addConfiguration(this.getAppExternalConfig(prefix, id));
+        // 添加一个InmemoryConfiguration对象, 该InmemoryConfiguration对象的store属性值为本类的成员变量externalConfigurationMap
         compositeConfiguration.addConfiguration(this.getExternalConfig(prefix, id));
+        //添加到configList中
         compositeConfiguration.addConfiguration(this.getPropertiesConfig(prefix, id));
         return compositeConfiguration;
     }
@@ -125,6 +139,7 @@ public class Environment {
         return getConfiguration(null, null);
     }
 
+    // 返回 prefix+id+"." 或者 prefix和id都为空, 则返回"dubbo"
     private static String toKey(String prefix, String id) {
         StringBuilder sb = new StringBuilder();
         if (StringUtils.isNotEmpty(prefix)) {

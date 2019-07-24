@@ -35,6 +35,7 @@ public class PropertiesConfiguration extends AbstractPrefixConfiguration {
     }
 
     @Override
+    // 取key配置的属性值, 先从从系统环境中取, 若没取到再从配置文件中取
     public Object getInternalProperty(String key) {
         return ConfigUtils.getProperty(key);
     }

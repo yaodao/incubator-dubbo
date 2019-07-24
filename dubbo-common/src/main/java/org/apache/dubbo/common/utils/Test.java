@@ -1,5 +1,6 @@
 package org.apache.dubbo.common.utils;
 
+import org.apache.dubbo.common.timer.HashedWheelTimer;
 import sun.reflect.annotation.AnnotationType;
 
 import java.lang.annotation.Annotation;
@@ -9,8 +10,7 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -118,29 +118,97 @@ public class Test {
 //        System.out.println("value2=" +value2);
 //    }
 
-    public static void main(String[] args) throws Exception{
-//        Pattern pat = Pattern.compile("[\\-._0-9a-zA-Z]+");
-//        Pattern pat =  Pattern.compile("[,\\-._0-9a-zA-Z]+");
-//        Pattern pat =   Pattern.compile("[a-zA-Z][0-9a-zA-Z]*");
-//        Pattern pat =    Pattern.compile("[/\\-$._0-9a-zA-Z]+");
-//        Pattern pat =  Pattern.compile("[*,\\-._0-9a-zA-Z]+");
-        Pattern pat =  Pattern.compile("[:*,\\s/\\-._0-9a-zA-Z]+");
-//        String s = "aa-bb,count.000";
-        String s = "aa,bb:aa_bb:00*bb:aa  bb:aa-bb";
-//        String s = "/aa$A.proxy/b-b/cc/dd";
-        Matcher mat = pat.matcher(s);
-        if(mat.find()){
-            System.out.println("match");
-            System.out.println(mat.group(0));
-        } else{
-            System.out.println("not find");
-        }
+//    public static void main(String[] args) throws Exception{
+////        Pattern pat = Pattern.compile("[\\-._0-9a-zA-Z]+");
+////        Pattern pat =  Pattern.compile("[,\\-._0-9a-zA-Z]+");
+////        Pattern pat =   Pattern.compile("[a-zA-Z][0-9a-zA-Z]*");
+////        Pattern pat =    Pattern.compile("[/\\-$._0-9a-zA-Z]+");
+////        Pattern pat =  Pattern.compile("[*,\\-._0-9a-zA-Z]+");
+//        Pattern pat =  Pattern.compile("[:*,\\s/\\-._0-9a-zA-Z]+");
+////        String s = "aa-bb,count.000";
+//        String s = "aa,bb:aa_bb:00*bb:aa  bb:aa-bb";
+////        String s = "/aa$A.proxy/b-b/cc/dd";
+//        Matcher mat = pat.matcher(s);
+//        if(mat.find()){
+//            System.out.println("match");
+//            System.out.println(mat.group(0));
+//        } else{
+//            System.out.println("not find");
+//        }
+//
+//        List<String> arr = new ArrayList<>();
+//        arr.add("dd");
+//        arr.add("aa");
+//        arr.add("bb");
+//
+//        System.out.println(arr.iterator().next());
+//    }
 
-        List<String> arr = new ArrayList<>();
-        arr.add("dd");
-        arr.add("aa");
-        arr.add("bb");
+//    public static void main(String[] args) {
+////        Class tem = boolean.class;
+////        if (Boolean.class.equals(tem)){
+////            System.out.println("hehe1");
+////        }
+////        if (Boolean.TYPE.equals(tem)){
+////            System.out.println("hehe2");
+////        }
+////
+//////        Class tt = TestImpl.class.asSubclass(Enum.class);
+////        Class tt = TestImpl.class.asSubclass(TestInterface.class);
+////        System.out.println(tt);
+////
+////        tt.getName();
+////    }
 
-        System.out.println(arr.iterator().next());
+    private static int normalizeTicksPerWheel(int ticksPerWheel) {
+        int normalizedTicksPerWheel = ticksPerWheel - 1;
+        System.out.println(normalizedTicksPerWheel);
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 1;
+        System.out.println(normalizedTicksPerWheel);
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 2;
+        System.out.println(normalizedTicksPerWheel);
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 4;
+        System.out.println(normalizedTicksPerWheel);
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 8;
+
+        normalizedTicksPerWheel |= normalizedTicksPerWheel >>> 16;
+        return normalizedTicksPerWheel + 1;
+    }
+
+
+//    public static void main(String[] args) {
+//        HashMap<String, String> m1 = new HashMap<>();
+//        HashMap<String, String> m2 = new HashMap<>();
+//
+//        m1.put("aaa", "a");
+//        m1.put("bbb", "b");
+//        m1.put("ccc", "c");
+//
+//
+//        m2.put("bbb", "b");
+//        m2.put("aaa", "a");
+//        m2.put("ccc", "c");
+//        m2.put("ddd", "c");
+//        System.out.println(m1.equals(m2));
+//
+//        System.out.println(normalizeTicksPerWheel(129));
+////        System.out.println(normalizeTicksPerWheel(7));
+//
+//        System.out.println(System.getProperty("os.name", "").toLowerCase(Locale.US));
+//        System.out.println(System.getProperty("os.name", "").contains("win"));
+//    }
+
+    private long startTime;
+    public static void main(String[] args) throws InterruptedException {
+//        long sleepTimeMs = (-210+9)/10;
+//        System.out.println(sleepTimeMs);
+//        System.out.println(sleepTimeMs/10 *10);
+
+        Test obj = new Test();
+        System.out.println(obj.startTime);
+//        Thread.sleep(100);
+//        final long currentTime = System.nanoTime() - startTime;
+//        long sleepTimeMs = (currentTime + 999999) / 1000000;
+//        System.out.println(sleepTimeMs);
     }
 }
