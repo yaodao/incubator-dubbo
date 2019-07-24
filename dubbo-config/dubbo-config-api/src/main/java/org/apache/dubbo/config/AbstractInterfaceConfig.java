@@ -249,6 +249,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
     private void prepareEnvironment() {
         if (configCenter.isValid()) {
+            // 感觉这里作用就是控制prepareEnvironment() 只被执行一次
             if (!configCenter.checkOrUpdateInited()) {
                 return;
             }
@@ -745,8 +746,11 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     }
 
     @SuppressWarnings({"unchecked"})
+    // 给ConfigManager对象和当前对象的成员变量registries赋值
     public void setRegistries(List<? extends RegistryConfig> registries) {
+        // 给ConfigManager对象的成员变量registries赋值 (将参数registryConfigs 中的元素添加到ConfigManager对象的成员变量registries中)
         ConfigManager.getInstance().addRegistries((List<RegistryConfig>) registries);
+        // 设置当前对象的registries值
         this.registries = (List<RegistryConfig>) registries;
     }
 
@@ -767,7 +771,9 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         setMonitor(new MonitorConfig(monitor));
     }
 
+    // 给ConfigManager对象和当前对象的成员变量monitor赋值
     public void setMonitor(MonitorConfig monitor) {
+        // 给ConfigManager对象的成员变量monitor赋值
         ConfigManager.getInstance().setMonitor(monitor);
         this.monitor = monitor;
     }

@@ -108,8 +108,10 @@ public class ConfigManager {
         return Optional.ofNullable(monitor);
     }
 
+    // 给成员变量monitor赋值
     public void setMonitor(MonitorConfig monitor) {
         if (monitor != null) {
+            // 若this.monitor有值 且 this.monitor和参数monitor对象的属性值不同, 则抛出异常; 若相同则无动作
             checkDuplicate(this.monitor, monitor);
             this.monitor = monitor;
         }
@@ -233,7 +235,7 @@ public class ConfigManager {
         if (StringUtils.isEmpty(key)) {
             throw new IllegalStateException("A ProtocolConfig should either has an id or it's the default one, " + protocolConfig);
         }
-        // 若有id相同， 且属性值相同的ProtocolConfig对象, 则warn下, 不添加到protocols中
+        // 若有id相同(即,key相同) 且属性值不同的ProtocolConfig对象, 则warn下, 不添加到protocols中
         if (protocols.containsKey(key) && !protocolConfig.equals(protocols.get(key))) {
             logger.warn("Duplicate ProtocolConfig found, there already has one default ProtocolConfig or more than two ProtocolConfigs have the same id, " +
                                                     "you can try to give each ProtocolConfig a different id. " + protocolConfig);
@@ -259,17 +261,20 @@ public class ConfigManager {
         return Optional.of(defaults);
     }
 
+    // 将参数registryConfigs 中的元素添加到成员变量registries中
     public void addRegistries(List<RegistryConfig> registryConfigs) {
         if (registryConfigs != null) {
             registryConfigs.forEach(this::addRegistry);
         }
     }
 
+    // 将 (registryConfig.getId(), registryConfig) 添加到成员变量registries中 (若key对应的value 和参数registryConfig对象的属性值一样, 则不添加)
     public void addRegistry(RegistryConfig registryConfig) {
         if (registryConfig == null) {
             return;
         }
 
+        // id不是空, 则返回id, 否则若允许有默认值, 则返回 "default", 否则返回null
         String key = StringUtils.isNotEmpty(registryConfig.getId())
                 ? registryConfig.getId()
                 : (registryConfig.isDefault() == null || registryConfig.isDefault()) ? DEFAULT_KEY : null;
@@ -278,10 +283,12 @@ public class ConfigManager {
             throw new IllegalStateException("A RegistryConfig should either has an id or it's the default one, " + registryConfig);
         }
 
+        // key对应的RegistryConfig对象存在, 且参数registryConfig 与key对应的registryConfig对象 属性值不同, 则warn下, 不添加到registries中
         if (registries.containsKey(key) && !registryConfig.equals(registries.get(key))) {
             logger.warn("Duplicate RegistryConfig found, there already has one default RegistryConfig or more than two RegistryConfigs have the same id, " +
                                                     "you can try to give each RegistryConfig a different id. " + registryConfig);
         } else {
+            // add
             registries.put(key, registryConfig);
         }
     }
@@ -314,9 +321,9 @@ public class ConfigManager {
         getConsumers().values().forEach(ConsumerConfig::refresh);
     }
 
-    // oldOne和newOne 两个对象成员变量值是否相同, 不同则抛出异常
+    // 若oldOne不为空, 则比较 oldOne和newOne 两个对象成员变量值是否相同, 不同则抛出异常; 若oldOne为空, 则无动作 直接返回.
     private void checkDuplicate(AbstractConfig oldOne, AbstractConfig newOne) {
-        // 比较oldOne和newOne对象的属性值是否相同, 不同抛出异常
+        // 若oldOne和newOne对象的属性值不同, 则抛出异常
         if (oldOne != null && !oldOne.equals(newOne)) {
             String configName = oldOne.getClass().getSimpleName();
             throw new IllegalStateException("Duplicate Config found for " + configName + ", you should use only one unique " + configName + " for one application.");

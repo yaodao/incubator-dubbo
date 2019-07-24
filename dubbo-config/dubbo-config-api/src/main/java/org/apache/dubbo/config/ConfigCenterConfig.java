@@ -29,10 +29,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * ConfigCenterConfig
  */
+// 配置中心
 public class ConfigCenterConfig extends AbstractConfig {
     private AtomicBoolean inited = new AtomicBoolean(false);
 
     private String protocol;
+    // 举例: configCenterConfig.setAddress("zookeeper://127.0.0.1:2181");
     private String address;
     private String cluster;
     private String namespace = "dubbo";
@@ -53,20 +55,27 @@ public class ConfigCenterConfig extends AbstractConfig {
     public ConfigCenterConfig() {
     }
 
+    // 用当前对象构造出一个URL对象
     public URL toUrl() {
+        //  key是当前对象的属性名, value是该属性的值
         Map<String, String> map = this.getMetaData();
+        // address举例: "zookeeper://127.0.0.1:2181"
         if (StringUtils.isEmpty(address)) {
+            // address为空, 则赋值为"0.0.0.0"
             address = Constants.ANYHOST_VALUE;
         }
+        // put("path", "ConfigCenterConfig")
         map.put(Constants.PATH_KEY, ConfigCenterConfig.class.getSimpleName());
-        // use 'zookeeper' as the default configcenter.
+        // 若"protocol"对应的value为空, 则put("protocol", "zookeeper")
         if (StringUtils.isEmpty(map.get(Constants.PROTOCOL_KEY))) {
             map.put(Constants.PROTOCOL_KEY, Constants.ZOOKEEPER_PROTOCOL);
         }
+        // 用解析address得到的元素来构造URL对象; URL对象的某个属性, 若在address中没有给值, 则使用defaults中的默认值
         return UrlUtils.parseURL(address, map);
     }
 
     public boolean checkOrUpdateInited() {
+        // 若inited是false, 则设置成true
         return inited.compareAndSet(false, true);
     }
 
@@ -203,11 +212,13 @@ public class ConfigCenterConfig extends AbstractConfig {
 
     @Override
     @Parameter(excluded = true)
+    // 配置中心的字段值是否合法
+    // address包含"://" 或者 protocol不空 都可以返回true
     public boolean isValid() {
         if (StringUtils.isEmpty(address)) {
             return false;
         }
-
+        // address包含"://" 或者 protocol不空 都可以返回true
         return address.contains("://") || StringUtils.isNotEmpty(protocol);
     }
 }

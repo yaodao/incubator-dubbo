@@ -30,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class Environment {
     private static final Environment INSTANCE = new Environment();
 
+    // key是 prefix+id+"."  value是一个Configuration类型的对象, 下面的一样
     private Map<String, PropertiesConfiguration> propertiesConfigs = new ConcurrentHashMap<>();
     private Map<String, SystemConfiguration> systemConfigs = new ConcurrentHashMap<>();
     private Map<String, EnvironmentConfiguration> environmentConfigs = new ConcurrentHashMap<>();
@@ -51,6 +52,7 @@ public class Environment {
     }
 
     public PropertiesConfiguration getPropertiesConfig(String prefix, String id) {
+        // 将 key=prefix+id+"."  value=PropertiesConfiguration对象 放到propertiesConfigs中
         return propertiesConfigs.computeIfAbsent(toKey(prefix, id), k -> new PropertiesConfiguration(prefix, id));
     }
 
@@ -94,10 +96,12 @@ public class Environment {
         return appExternalConfigurationMap;
     }
 
+    // 将参数map中的所有entry添加到externalConfigurationMap中
     public void updateExternalConfigurationMap(Map<String, String> externalMap) {
         this.externalConfigurationMap.putAll(externalMap);
     }
 
+    // 将参数map中的所有entry添加到appExternalConfigurationMap中
     public void updateAppExternalConfigurationMap(Map<String, String> externalMap) {
         this.appExternalConfigurationMap.putAll(externalMap);
     }
@@ -111,6 +115,7 @@ public class Environment {
      * @param id
      * @return
      */
+    // 新生成一个CompositeConfiguration对象, 将各种Configuration对象添加到它的configList中, 返回该对象
     public CompositeConfiguration getConfiguration(String prefix, String id) {
         CompositeConfiguration compositeConfiguration = new CompositeConfiguration();
         // Config center has the highest priority
@@ -125,6 +130,7 @@ public class Environment {
         return getConfiguration(null, null);
     }
 
+    // 返回 prefix+id+"." 或者 返回"dubbo"
     private static String toKey(String prefix, String id) {
         StringBuilder sb = new StringBuilder();
         if (StringUtils.isNotEmpty(prefix)) {

@@ -546,7 +546,7 @@ public abstract class AbstractConfig implements Serializable {
     // 返回的map, key是方法对应的属性名, value是该属性的值 (处理的都是当前对象的成员变量的get方法)
     public Map<String, String> getMetaData() {
         Map<String, String> metaData = new HashMap<>();
-        // 取当前类的所有方法
+        // 取clazz的所有public方法
         Method[] methods = this.getClass().getMethods();
         for (Method method : methods) {
             try {
@@ -557,7 +557,7 @@ public abstract class AbstractConfig implements Serializable {
                     String prop = calculateAttributeFromGetter(name);
                     String key;
                     Parameter parameter = method.getAnnotation(Parameter.class);
-                    // 若方法上Parameter注解中的key()有值 且 useKeyAsProperty()值为true, 则把key赋值为key()
+                    // 若方法上Parameter注解中的key()有值 且 useKeyAsProperty()值为true, 则key赋值为key()
                     if (parameter != null && parameter.key().length() > 0 && parameter.useKeyAsProperty()) {
                         key = parameter.key();
                     } else {

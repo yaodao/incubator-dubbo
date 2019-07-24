@@ -38,12 +38,14 @@ public class CompositeConfiguration implements Configuration {
 
     }
 
+    // 将configurations添加到成员变量configList
     public CompositeConfiguration(Configuration... configurations) {
         if (configurations != null && configurations.length > 0) {
             Arrays.stream(configurations).filter(config -> !configList.contains(config)).forEach(configList::add);
         }
     }
 
+    // 将参数configuration添加到成员变量configList中
     public void addConfiguration(Configuration configuration) {
         if (configList.contains(configuration)) {
             return;
