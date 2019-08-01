@@ -54,6 +54,7 @@ public class Environment {
 
     // 将 (key=prefix+id+"."  value=SystemConfiguration) 放到propertiesConfigs中, 并返回PropertiesConfiguration对象
     public PropertiesConfiguration getPropertiesConfig(String prefix, String id) {
+        // 将 key=prefix+id+"."  value=PropertiesConfiguration对象 放到propertiesConfigs中
         return propertiesConfigs.computeIfAbsent(toKey(prefix, id), k -> new PropertiesConfiguration(prefix, id));
     }
 

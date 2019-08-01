@@ -505,6 +505,8 @@ public abstract class AbstractConfig implements Serializable {
 
     /**
      * 取注解中的值, 设置本类对象的成员变量
+     * 例如: appendAnnotation(Service.class, service); 其中Service是注解类
+     * clazz.getMethods可以取到注解类中的每一项, 这个用法之前没见过, 包括api说明中也没有说clazz可以是注解类
      * @param annotationClass 注解类的clazz对象
      * @param annotation 注解类的对象（可以通过类似 Test.class.getAnnotation(TestStatus.class); 获取）
      */
@@ -518,19 +520,21 @@ public abstract class AbstractConfig implements Serializable {
                     && !Modifier.isStatic(method.getModifiers())) {
                 // 不是Object类的方法 且 有返回值,没参数, 且 是public,非static 的方法
                 try {
-                    // 获取该method所代表的注解类成员的名字
+                    // 获取该method所代表的注解类的成员的名字 (其实就是一个属性名)
                     String property = method.getName();
                     if ("interfaceClass".equals(property) || "interfaceName".equals(property)) {
                         property = "interface";
                     }
-                    // 得到一个方法名 "set***"
+                    // 得到一个方法名, 形如"set***"
                     String setter = "set" + property.substring(0, 1).toUpperCase() + property.substring(1);
 
-                    // (认识到 Method对象 和 类的对象是两个独立的东西;
-                    // Method对象可以直接由类的clazz取到, 而不要求必须是通过类的对象实例取到, 但这个取到的Method对象却可以作用于任意的该类的对象实例)
-                    Object value = method.invoke(annotation);// 在annotation对象上,调用method方法, 得到值
+                    // (认识到 Method对象 和 类的实例对象是两个独立的东西;
+                    // Method对象可以直接由类的clazz取到, 而不要求必须是通过类的对象实例取到, 但这个取到的Method对象却可以作用于任意的该类的对象实例上)
+
+                    // 在annotation对象上,调用method方法, 得到值value. 若value值不是注解的默认值, 则将该value值设置到当前对象的属性中
+                    Object value = method.invoke(annotation);
                     if (value != null && !value.equals(method.getDefaultValue())) {
-                        // 根据method的返回值类型, 找到set函数
+                        // 得到method对象的返回值类型
                         Class<?> parameterType = ReflectUtils.getBoxedClass(method.getReturnType());
                         if ("filter".equals(property) || "listener".equals(property)) {
                             parameterType = String.class;
@@ -540,6 +544,7 @@ public abstract class AbstractConfig implements Serializable {
                             value = CollectionUtils.toStringMap((String[]) value);
                         }
                         try {
+                            // 根据method的返回值类型, 找到本类的set函数 (因为是通过注解里的值来设置本类对象的属性, 所以注解的值的类型就是本类对象的set方法的参数类型)
                             Method setterMethod = getClass().getMethod(setter, parameterType);
                             // 调用本类对象的set方法, 将value值设置进去
                             setterMethod.invoke(this, value);
