@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
  * A task which is executed after the delay specified with
  * {@link Timer#newTimeout(TimerTask, long, TimeUnit)} (TimerTask, long, TimeUnit)}.
  */
+// 一个任务类， 可以指定延迟时间再执行, 延迟时间由 Timer.newTimeout() 函数指定
 public interface TimerTask {
 
     /**
@@ -30,5 +31,7 @@ public interface TimerTask {
      *
      * @param timeout a handle which is associated with this task
      */
+    // run函数会在指定的延迟时间后执行, 参数timeout是关联该task的一个handle
+    //  延迟时间由 Timer.newTimeout() 函数指定
     void run(Timeout timeout) throws Exception;
 }

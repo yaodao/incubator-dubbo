@@ -20,6 +20,8 @@ package org.apache.dubbo.common.timer;
  * A handle associated with a {@link TimerTask} that is returned by a
  * {@link Timer}.
  */
+// Timeout是一个handle, 是关联TimerTask对象的handle,  Timeout由Timer类创建并返回
+// （所谓的关联意思是, Timeout对象有一个成员变量是TimerTask类型的）
 public interface Timeout {
 
     /**
@@ -30,6 +32,7 @@ public interface Timeout {
     /**
      * Returns the {@link TimerTask} which is associated with this handle.
      */
+    // 返回Timeout对象关联的TimerTask对象
     TimerTask task();
 
     /**
