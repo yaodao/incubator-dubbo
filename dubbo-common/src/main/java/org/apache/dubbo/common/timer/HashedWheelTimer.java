@@ -426,9 +426,12 @@ public class HashedWheelTimer implements Timer {
 
 
     /**
-     * 新建一个HashedWheelTimeout对象, 并关联上timer对象和task对象
-     * 即, 给它的成员变量timer, task, deadline 赋上值
+     * 1.新建一个timeout对象, 并放到当前timer对象的timeouts中
+     * 2.启动当前timer对象中worker任务所在的线程, 让worker任务去消费圆盘中的任务 (worker取出圆盘中的timeout对象, 执行timeout对象中的task属性的run方法)
+     * 大体上来说就是: timer对象会使用newTimeout()生产timeout对象, worker任务线程就去消费这些timeout对象
      *
+     *
+     * 新建一个timeout对象时, 会关联上timer对象和task对象, 即, 给它的成员变量timer, task, deadline 赋上值
      * @param task 一个要执行的任务
      * @param delay 等待delay时间后, 执行一次task.
      *              例如: timer.newTimeout(new PrintTask(), 5, TimeUnit.SECONDS); 表示等待5秒之后执行一次PrintTask
@@ -587,7 +590,7 @@ public class HashedWheelTimer implements Timer {
                 // 轮数 (需要几轮走完, calculated - tick是还剩的步数, tick是已经走的步数)
                 timeout.remainingRounds = (calculated - tick) / wheel.length;
 
-                // 取max的意思是: 如果这个任务我们取晚了，就将它加入到当前tick值对应的桶中 (当calculated<tick时)
+                // 取max的意思是: 如果这个任务我们取晚了，就将它加入到当前tick值对应的桶中 (这时的calculated<tick)
                 final long ticks = Math.max(calculated, tick);
                 // 确定该timeout应该放的位置 (放在哪个bucket里)
                 int stopIndex = (int) (ticks & mask);
