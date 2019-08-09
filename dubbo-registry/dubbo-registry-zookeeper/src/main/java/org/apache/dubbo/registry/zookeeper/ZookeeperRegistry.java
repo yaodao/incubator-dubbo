@@ -42,33 +42,58 @@ import java.util.concurrent.ConcurrentMap;
  * ZookeeperRegistry
  *
  */
+// ZookeeperRegistry的工作就是通过Zookeeper API实现doRegister,doUnregister,doSubscribe,doUnsubscribe的具体逻辑
 public class ZookeeperRegistry extends FailbackRegistry {
 
     private final static Logger logger = LoggerFactory.getLogger(ZookeeperRegistry.class);
 
+    /**
+     * 默认端口
+     */
     private final static int DEFAULT_ZOOKEEPER_PORT = 2181;
 
+    /**
+     * 默认 Zookeeper 根节点
+     */
     private final static String DEFAULT_ROOT = "dubbo";
 
+    /**
+     * Zookeeper 根节点 ，默认值是 "/dubbo"
+     */
     private final String root;
 
+    /**
+     * Service 接口全名集合
+     */
     private final Set<String> anyServices = new ConcurrentHashSet<>();
 
+    /**
+     * 监听器集合
+     */
     private final ConcurrentMap<URL, ConcurrentMap<NotifyListener, ChildListener>> zkListeners = new ConcurrentHashMap<>();
 
+    /**
+     * Zookeeper 客户端
+     */
     private final ZookeeperClient zkClient;
 
     public ZookeeperRegistry(URL url, ZookeeperTransporter zookeeperTransporter) {
         super(url);
         if (url.isAnyHost()) {
+            // url中没有提供host值
             throw new IllegalStateException("registry address == null");
         }
+
+        // 获取url中的group属性值，若没有， 则group的默认值为"dubbo"
         String group = url.getParameter(Constants.GROUP_KEY, DEFAULT_ROOT);
+        // group前面加 "/" , 例如 "/dubbo"
         if (!group.startsWith(Constants.PATH_SEPARATOR)) {
             group = Constants.PATH_SEPARATOR + group;
         }
+        // 如果url中不进行配置，则默认dubbo的根目录就是"/dubbo"
         this.root = group;
         zkClient = zookeeperTransporter.connect(url);
+        // 添加一个StateListener对象到zkClient对象的属性stateListeners中 （暂时估计这个stateListeners中的对象，在某个地方会被自动调用）
         zkClient.addStateListener(state -> {
             if (state == StateListener.RECONNECTED) {
                 try {
@@ -96,8 +121,22 @@ public class ZookeeperRegistry extends FailbackRegistry {
     }
 
     @Override
+    /**
+     * 在zk上建立节点（就是创建目录）
+     * toUrlPath(url)后具体格式为 /{group}/{interfaceName}/{category}/{url.toFullString}
+     *
+     * 需要注意下节点的路径生成格式，也就是toUrlPath(url)方法，生成的串格式为 /{group}/{interfaceName}/{category}/{url.toFullString}，
+     * group一般不配置的话为"/dubbo"，
+     * interfaceName对应具体接口全名，
+     * category开始就讲过，分为consumers,configuators,routers,providers
+     * url.toFullString就是我们的url配置
+     * 对于registry来讲category=providers
+     *
+     * @param url 类似 "zookeeper://zookeeper/org.apache.dubbo.test.injvmServie?notify=false&methods=test1,test2"
+     */
     public void doRegister(URL url) {
         try {
+            // 在zk上建立节点， 参数path最后一个"/"之前路径的才会建立对应节点
             zkClient.create(toUrlPath(url), url.getParameter(Constants.DYNAMIC_KEY, true));
         } catch (Throwable e) {
             throw new RpcException("Failed to register " + url + " to zookeeper " + getUrl() + ", cause: " + e.getMessage(), e);
@@ -116,7 +155,9 @@ public class ZookeeperRegistry extends FailbackRegistry {
     @Override
     public void doSubscribe(final URL url, final NotifyListener listener) {
         try {
+            // 若url的"interface"属性值为 "*", 即订阅全局，对于新增和已存在的所有接口的改动都会触发回调
             if (Constants.ANY_VALUE.equals(url.getServiceInterface())) {
+                //  root="/dubbo"
                 String root = toRootPath();
                 ConcurrentMap<NotifyListener, ChildListener> listeners = zkListeners.get(url);
                 if (listeners == null) {
@@ -210,6 +251,7 @@ public class ZookeeperRegistry extends FailbackRegistry {
         }
     }
 
+    // 返回"/" 或者 "/dubbo/"
     private String toRootDir() {
         if (root.equals(Constants.PATH_SEPARATOR)) {
             return root;
@@ -221,11 +263,16 @@ public class ZookeeperRegistry extends FailbackRegistry {
         return root;
     }
 
+    // 若参数url中interface属性值是"*"， 则返回 "/dubbo"
+    // 若不是则返回 "/dubbo" + 参数url中interface值，其实就是 "/dubbo" + 接口全名
     private String toServicePath(URL url) {
+        // 从url中取key="interface" 对应的值, 值是一个接口的全名
         String name = url.getServiceInterface();
         if (Constants.ANY_VALUE.equals(name)) {
+            // 若url中key="interface"的值是 "*"， 则返回成员变量root值
             return toRootPath();
         }
+        // 返回 root + interfaceName
         return toRootDir() + URL.encode(name);
     }
 
@@ -244,11 +291,22 @@ public class ZookeeperRegistry extends FailbackRegistry {
         return paths;
     }
 
+    // 若参数url的category属性有值， 则返回"/dubbo" + 接口全名 + url的category属性值
+    // 否则默认返回"/dubbo" + 接口全名 + "/providers"
     private String toCategoryPath(URL url) {
         return toServicePath(url) + Constants.PATH_SEPARATOR + url.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY);
     }
 
+    // 参数url类似 "zookeeper://zookeeper/org.apache.dubbo.test.injvmServie?notify=false&methods=test1,test2"
+
+    /**
+     * 返回字符串 形如， "/dubbo" + 接口全名 + url的category属性值 +  "protocol://username:password@host:port?key1=value1&key2=value2"
+     *
+     * @param url 类似 "zookeeper://zookeeper/org.apache.dubbo.test.injvmServie?notify=false&methods=test1,test2"
+     * @return
+     */
     private String toUrlPath(URL url) {
+        // 返回"/dubbo" + 接口全名 + url的category属性值 + "/" + "protocol://username:password@host:port?key1=value1&key2=value2"
         return toCategoryPath(url) + Constants.PATH_SEPARATOR + URL.encode(url.toFullString());
     }
 

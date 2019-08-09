@@ -430,6 +430,7 @@ public class HashedWheelTimer implements Timer {
      * 2.启动当前timer对象中worker任务所在的线程, 让worker任务去消费圆盘中的任务 (worker取出圆盘中的timeout对象, 执行timeout对象中的task属性的run方法)
      * 大体上来说就是: timer对象会使用newTimeout()生产timeout对象, worker任务线程就去消费这些timeout对象
      *
+     * worker线程是一个单独的线程，不在线程池里，手动启动，执行完就停止，下次timer再调用newTimeout时，再手动启动线程。
      *
      * 新建一个timeout对象时, 会关联上timer对象和task对象, 即, 给它的成员变量timer, task, deadline 赋上值
      * @param task 一个要执行的任务

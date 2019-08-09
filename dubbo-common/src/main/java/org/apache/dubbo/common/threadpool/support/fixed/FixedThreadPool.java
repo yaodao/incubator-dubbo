@@ -37,9 +37,16 @@ public class FixedThreadPool implements ThreadPool {
 
     @Override
     public Executor getExecutor(URL url) {
+        // 取url中 key="threadname" 对应的值, 没有则返回"Dubbo"
         String name = url.getParameter(Constants.THREAD_NAME_KEY, Constants.DEFAULT_THREAD_NAME);
+        // 取url中 key="threads" 对应的值, 没有则返回200
         int threads = url.getParameter(Constants.THREADS_KEY, Constants.DEFAULT_THREADS);
+        // 取url中 key="queues" 对应的值, 没有则返回0, 这个值用于确定线程池的等待队列是什么
         int queues = url.getParameter(Constants.QUEUES_KEY, Constants.DEFAULT_QUEUES);
+
+        // 创建一个线程池
+        // 当queues=0 使用SynchronousQueue做任务等待队列（大小为0的等待队列）
+        // 当queues!=0 则使用LinkedBlockingQueue做任务等待队列
         return new ThreadPoolExecutor(threads, threads, 0, TimeUnit.MILLISECONDS,
                 queues == 0 ? new SynchronousQueue<Runnable>() :
                         (queues < 0 ? new LinkedBlockingQueue<Runnable>()

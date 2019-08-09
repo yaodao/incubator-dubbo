@@ -84,7 +84,7 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     @Override
     public Registry getRegistry(URL url) {
         url = URLBuilder.from(url)
-                .setPath(RegistryService.class.getName())
+                .setPath(RegistryService.class.getName()) // path="org.apache.dubbo.registry.RegistryService"
                 .addParameter(Constants.INTERFACE_KEY, RegistryService.class.getName())
                 .removeParameters(Constants.EXPORT_KEY, Constants.REFER_KEY)
                 .build();

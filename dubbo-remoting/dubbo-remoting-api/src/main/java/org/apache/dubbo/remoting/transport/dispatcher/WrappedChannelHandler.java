@@ -36,6 +36,7 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
 
     protected static final Logger logger = LoggerFactory.getLogger(WrappedChannelHandler.class);
 
+    // 公用线程池, 产生的线程都是 t.setDaemon(true)
     protected static final ExecutorService SHARED_EXECUTOR = Executors.newCachedThreadPool(new NamedThreadFactory("DubboSharedHandler", true));
 
     protected final ExecutorService executor;
@@ -47,13 +48,18 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
     public WrappedChannelHandler(ChannelHandler handler, URL url) {
         this.handler = handler;
         this.url = url;
+        // 暂时认为获取的是 FixedThreadPool这个线程池
         executor = (ExecutorService) ExtensionLoader.getExtensionLoader(ThreadPool.class).getAdaptiveExtension().getExecutor(url);
 
+        // componentKey = "java.util.concurrent.ExecutorService"
         String componentKey = Constants.EXECUTOR_SERVICE_COMPONENT_KEY;
         if (Constants.CONSUMER_SIDE.equalsIgnoreCase(url.getParameter(Constants.SIDE_KEY))) {
+            // componentKey =  "consumer"
             componentKey = Constants.CONSUMER_SIDE;
         }
+        // 获取SimpleDataStore对象
         DataStore dataStore = ExtensionLoader.getExtensionLoader(DataStore.class).getDefaultExtension();
+        // 将 entry=(componentName, (key, value)) 添加到 dataStore中
         dataStore.put(componentKey, Integer.toString(url.getPort()), executor);
     }
 
@@ -109,9 +115,11 @@ public class WrappedChannelHandler implements ChannelHandlerDelegate {
         return url;
     }
 
+    // 获取线程池
     public ExecutorService getExecutorService() {
         ExecutorService cexecutor = executor;
         if (cexecutor == null || cexecutor.isShutdown()) {
+            // 公用线程池
             cexecutor = SHARED_EXECUTOR;
         }
         return cexecutor;

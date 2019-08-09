@@ -475,6 +475,7 @@ public final class StringUtils {
         return true;
     }
 
+    // values是否含有value, 含有则返回true
     public static boolean isContains(String values, String value) {
         return isNotEmpty(values) && isContains(Constants.COMMA_SPLIT_PATTERN.split(values), value);
     }
@@ -484,6 +485,7 @@ public final class StringUtils {
      * @param value
      * @return contains
      */
+    // values数组是否含有value元素, 含有则返回true,  入参若有一个为空返回false
     public static boolean isContains(String[] values, String value) {
         if (isNotEmpty(value) && ArrayUtils.isNotEmpty(values)) {
             for (String v : values) {

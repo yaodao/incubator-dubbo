@@ -37,6 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class AbstractZookeeperTransporter implements ZookeeperTransporter {
     private static final Logger logger = LoggerFactory.getLogger(ZookeeperTransporter.class);
+    // key是zk的地址+端口, value是该zk地址对应的已连接的客户端, 例如： key="127.0.0.1:2181"
     private final Map<String, ZookeeperClient> zookeeperClientMap = new ConcurrentHashMap<>();
 
     /**
@@ -48,16 +49,19 @@ public abstract class AbstractZookeeperTransporter implements ZookeeperTransport
      * @return
      */
     @Override
+    // 获取一个zk客户端 ZookeeperClient对象
     public ZookeeperClient connect(URL url) {
         ZookeeperClient zookeeperClient;
         // 返回zk的主要和备用地址串集合
         List<String> addressList = getURLBackupAddress(url);
         // The field define the zookeeper server , including protocol, host, port, username, password
+        // 取一个zkClient对象
         if ((zookeeperClient = fetchAndUpdateZookeeperClientCache(addressList)) != null && zookeeperClient.isConnected()) {
             logger.info("find valid zookeeper client from the cache for address: " + url);
             // 返回一个能连接上addressList中地址的zkClient对象
             return zookeeperClient;
         }
+        // 没有已经连接上zk的zkClient对象
         // avoid creating too many connections， so add lock
         synchronized (zookeeperClientMap) {
             if ((zookeeperClient = fetchAndUpdateZookeeperClientCache(addressList)) != null && zookeeperClient.isConnected()) {
@@ -65,8 +69,10 @@ public abstract class AbstractZookeeperTransporter implements ZookeeperTransport
                 return zookeeperClient;
             }
 
+            // 修改入参url的属性值, 进而新建一个zkClient对象
             zookeeperClient = createZookeeperClient(toClientURL(url));
             logger.info("No valid zookeeper client found from cache, therefore create a new client for url. " + url);
+            // 将zk地址和该地址对应的zookeeperClient对象 添加到缓存zookeeperClientMap中
             writeToClientMap(addressList, zookeeperClient);
         }
         return zookeeperClient;
@@ -88,7 +94,8 @@ public abstract class AbstractZookeeperTransporter implements ZookeeperTransport
      * @param addressList
      * @return
      */
-    // 从成员变量zookeeperClientMap找到zk地址对应的zkClient对象, 返回该zkClient对象, 找不到返回null
+    // 从缓存zookeeperClientMap寻找入参zk地址对应的zookeeperClient对象,
+    // 找到则返回该zookeeperClient对象, 找不到返回null
     ZookeeperClient fetchAndUpdateZookeeperClientCache(List<String> addressList) {
 
         ZookeeperClient zookeeperClient = null;
@@ -97,7 +104,7 @@ public abstract class AbstractZookeeperTransporter implements ZookeeperTransport
                 break;
             }
         }
-        // zkclient是已连接的状态时, 才更新缓存zookeeperClientMap中的值
+        // zookeeperClient是已连接的状态时, 更新缓存zookeeperClientMap中的值，更新后还是原来的value值
         if (zookeeperClient != null && zookeeperClient.isConnected()) {
             writeToClientMap(addressList, zookeeperClient);
         }
@@ -126,7 +133,8 @@ public abstract class AbstractZookeeperTransporter implements ZookeeperTransport
      * @param addressList
      * @param zookeeperClient
      */
-    // key是zk的地址+端口, value是zkclient对象
+    // 将入参中的每个zk地址和该地址对应的zookeeperClient对象 添加到缓存zookeeperClientMap中
+    // key是zk的地址+端口, value是zookeeperClient对象
     // 参数addressList中的所有地址, 对应同一个client
     void writeToClientMap(List<String> addressList, ZookeeperClient zookeeperClient) {
         for (String address : addressList) {
@@ -141,7 +149,8 @@ public abstract class AbstractZookeeperTransporter implements ZookeeperTransport
      * @return
      */
     // 更新url的成员变量path的值为 "org.apache.dubbo.remoting.zookeeper.ZookeeperTransporter",
-    // 给url的成员变量parameters新增entry, url中其余属性值不变
+    // 给url的成员变量parameters赋值, url中其余属性值不变
+    // 例如: URL类似 zookeeper://127.0.0.1:2181/org.apache.dubbo.remoting.zookeeper.ZookeeperTransporter
     URL toClientURL(URL url) {
         Map<String, String> parameterMap = new HashMap<>();
         // for CuratorZookeeperClient
@@ -152,7 +161,8 @@ public abstract class AbstractZookeeperTransporter implements ZookeeperTransport
         if (url.getParameter(Constants.BACKUP_KEY) != null) {
             parameterMap.put(Constants.BACKUP_KEY, url.getParameter(Constants.BACKUP_KEY));
         }
-        // 更新url中的path, 新增url中parameters的元素
+        // 更新url中的path="org.apache.dubbo.remoting.zookeeper.ZookeeperTransporter",
+        // 给url的parameters赋值
         return new URL(url.getProtocol(), url.getUsername(), url.getPassword(), url.getHost(), url.getPort(),
                 ZookeeperTransporter.class.getName(), parameterMap);
     }

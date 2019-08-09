@@ -22,15 +22,24 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-// 暂时看来, 这个函数输出的字符串类似于 jstack -l pid 输出的结果
 public class JVMUtil {
+    /**
+     * 将当前JVM中的线程和锁的信息写入参数stream
+     * （线程和锁的信息就类似于 jstack -l pid 的输出结果）
+     *
+     * @param stream 输出流
+     * @throws Exception
+     */
     public static void jstack(OutputStream stream) throws Exception {
+        // 获得 Java虚拟机线程系统的管理接口, 通过该对象可以 dump 所有的线程信息
         ThreadMXBean threadMxBean = ManagementFactory.getThreadMXBean();
         for (ThreadInfo threadInfo : threadMxBean.dumpAllThreads(true, true)) {
+            // 将当前JVM中的线程和锁的信息输出到文件
             stream.write(getThreadDumpString(threadInfo).getBytes());
         }
     }
 
+    // 这个函数返回的字符串类似于 jstack -l pid 输出的结果
     private static String getThreadDumpString(ThreadInfo threadInfo) {
         StringBuilder sb = new StringBuilder("\"" + threadInfo.getThreadName() + "\"" +
                 " Id=" + threadInfo.getThreadId() + " " +

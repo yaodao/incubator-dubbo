@@ -415,7 +415,7 @@ public class UrlUtils {
     // 判断category是否为categories的子串, true 是
     public static boolean isMatchCategory(String category, String categories) {
         if (categories == null || categories.length() == 0) {
-            // category是否为 "providers"
+            // 若入参categories是空, 则判断category是否等于 "providers"
             return DEFAULT_CATEGORY.equals(category);
         } else if (categories.contains(Constants.ANY_VALUE)) {
             return true;
@@ -427,26 +427,26 @@ public class UrlUtils {
         }
     }
 
-    // 判断consumerUrl和providerUrl中的以下元素是否相同,  都相同返回true
-    // consumerGroup和providerGroup是否相同 且 consumerVersion和providerVersion是否相同 且 consumerClassifier和providerClassifier是否相同
-    // consumerGroup, consumerClassifier 若含有"*" 无论provider是啥, 都算相同
+    // 判断consumerUrl和providerUrl中的以下几个元素是否相同,  都相同返回true， 有一个不同返回false
+    // Interface， category， group， version， classifier
     public static boolean isMatch(URL consumerUrl, URL providerUrl) {
         String consumerInterface = consumerUrl.getServiceInterface();
         String providerInterface = providerUrl.getServiceInterface();
-        // accept providerUrl with '*' as interface name, after carefully thought about all possible scenarios I think it's ok to add this condition.
-        // consumerInterface串中没有星号 且 providerInterface串中没有星号 且 consumerInterface串和providerInterface串不相等, 函数返回false
+
+        // consumerInterface和providerInterface若相等则继续向下执行， 否则函数直接返回false
+        // 若其中任一个是星号则继续向下执行， 否则函数直接返回false
         if (!(Constants.ANY_VALUE.equals(consumerInterface)
                 || Constants.ANY_VALUE.equals(providerInterface)
                 || StringUtils.isEquals(consumerInterface, providerInterface))) {
             return false;
         }
 
-        // 第一个字符串不是第二个字符串的子串, 函数返回false
+        // providerUrl中"category"对应的值 不是 consumerUrl中"category"对应值的子串, 函数直接返回false， 是子串 则继续向下
         if (!isMatchCategory(providerUrl.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY),
                 consumerUrl.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY))) {
             return false;
         }
-        // url中"enabled"值为false 且 url中"enabled"值不为 "*", 函数返回false
+        // providerUrl中"enabled"值为false 且 consumerUrl中"enabled"值不为 "*", 函数直接返回false
         if (!providerUrl.getParameter(Constants.ENABLED_KEY, true)
                 && !Constants.ANY_VALUE.equals(consumerUrl.getParameter(Constants.ENABLED_KEY))) {
             return false;
@@ -463,9 +463,8 @@ public class UrlUtils {
         String providerVersion = providerUrl.getParameter(Constants.VERSION_KEY);
         String providerClassifier = providerUrl.getParameter(Constants.CLASSIFIER_KEY, Constants.ANY_VALUE);
 
-        // consumerGroup和providerGroup是否相同 且 consumerVersion和providerVersion是否相同 且 consumerClassifier和providerClassifier是否相同
-        // consumerGroup, consumerClassifier 若含有"*" 无论provider是啥, 都算相同
-        // 都相同返回true
+        // 若consumerGroup和providerGroup相同 且 consumerVersion和providerVersion相同 且 consumerClassifier和providerClassifier相同，则返回true，有一对不相同，就返回false
+        // 若consumerGroup, consumerClassifier ，consumerVersion 中任意一个是星号， 则看做它和对应的providerGroup/Classifier/Version相等
         return (Constants.ANY_VALUE.equals(consumerGroup) || StringUtils.isEquals(consumerGroup, providerGroup) || StringUtils.isContains(consumerGroup, providerGroup))
                 && (Constants.ANY_VALUE.equals(consumerVersion) || StringUtils.isEquals(consumerVersion, providerVersion))
                 && (consumerClassifier == null || Constants.ANY_VALUE.equals(consumerClassifier) || StringUtils.isEquals(consumerClassifier, providerClassifier));

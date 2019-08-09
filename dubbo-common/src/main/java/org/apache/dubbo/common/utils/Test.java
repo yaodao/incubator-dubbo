@@ -1,20 +1,25 @@
 package org.apache.dubbo.common.utils;
 
+import javassist.bytecode.stackmap.TypeData;
+import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.timer.HashedWheelTimer;
 import sun.reflect.annotation.AnnotationType;
 
+import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@TestStatus(retries=22)
+@TestStatus(retries = 22)
 public class Test {
 //    public static void main(String[] args) {
 //        String tem = "file:/path/to/file.txt";
@@ -198,17 +203,60 @@ public class Test {
 //        System.out.println(System.getProperty("os.name", "").contains("win"));
 //    }
 
-    private long startTime;
-    public static void main(String[] args) throws InterruptedException {
-//        long sleepTimeMs = (-210+9)/10;
-//        System.out.println(sleepTimeMs);
-//        System.out.println(sleepTimeMs/10 *10);
+//    private long startTime;
+//    public static void main(String[] args) throws InterruptedException {
+////        long sleepTimeMs = (-210+9)/10;
+////        System.out.println(sleepTimeMs);
+////        System.out.println(sleepTimeMs/10 *10);
+//
+//        Test obj = new Test();
+//        System.out.println(obj.startTime);
+////        Thread.sleep(100);
+////        final long currentTime = System.nanoTime() - startTime;
+////        long sleepTimeMs = (currentTime + 999999) / 1000000;
+////        System.out.println(sleepTimeMs);
+//
+//        String os = System.getProperty("os.name").toLowerCase();
+//        System.out.println(os);
+//    }
 
-        Test obj = new Test();
-        System.out.println(obj.startTime);
-//        Thread.sleep(100);
-//        final long currentTime = System.nanoTime() - startTime;
-//        long sleepTimeMs = (currentTime + 999999) / 1000000;
-//        System.out.println(sleepTimeMs);
+//    public static void main(String[] args) {
+//        System.out.println(ExecutorService.class.getName());
+//
+//        Package pkg = String.class.getPackage();
+//        String version = pkg.getImplementationVersion();
+//        System.out.println(version);
+//        String version2 = pkg.getSpecificationVersion();
+//        System.out.println(version2);
+//        System.out.println(System.getProperty("java.class.path"));
+//        String tem = Test.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+//        URL url =  Test.class.getProtectionDomain().getCodeSource().getLocation();
+//        System.out.println(tem);
+//
+//        System.out.println(System.getProperty("user.home"));
+//    }
+
+//    public static void main(String[] args) {
+//        String filename = "D:\\testimg\\aa\\bb\\cc\\aabbcc.txt";
+//        File file = new File(filename);
+////        if (!file.exists() && file.getParentFile() != null && !file.getParentFile().exists()) {
+////            if (!file.getParentFile().mkdirs()) {
+////                throw new IllegalArgumentException("Invalid registry cache file " + file + ", cause: Failed to create directory " + file.getParentFile() + "!");
+////            }
+////        }
+//        System.out.println(file.getParentFile().exists());
+//        System.out.println(file.exists());
+//        System.out.println("over");
+//    }
+
+    public static void main(String[] args) {
+        ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+        map.put("aa","aa11");
+        map.put("bb","bb");
+        System.out.println(map);
+
+        String res = map.putIfAbsent("cc","cc");
+        System.out.println(map);
+        System.out.println(res);
     }
 }

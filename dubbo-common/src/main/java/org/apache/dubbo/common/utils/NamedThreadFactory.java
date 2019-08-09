@@ -47,8 +47,8 @@ public class NamedThreadFactory implements ThreadFactory {
 
     /**
      * 产生一个线程工厂
-     * @param prefix 线程名字前缀
-     * @param daemon 所产生的线程是否后台运行
+     * @param prefix 线程名字前缀, 线程的全名是 prefix + "-thread-" + mThreadNum
+     * @param daemon 所产生的线程是否守护线程 true是
      */
     public NamedThreadFactory(String prefix, boolean daemon) {
         mPrefix = prefix + "-thread-";

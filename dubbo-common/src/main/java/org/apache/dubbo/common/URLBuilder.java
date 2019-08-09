@@ -23,7 +23,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
+// 一个用于构造URL对象的辅助类
 public final class URLBuilder {
     private String protocol;
 
@@ -85,6 +85,7 @@ public final class URLBuilder {
         this.parameters = parameters != null ? parameters : new HashMap<>();
     }
 
+    // 使用参数url构造一个URLBuilder对象
     public static URLBuilder from(URL url) {
         String protocol = url.getProtocol();
         String username = url.getUsername();
@@ -103,12 +104,14 @@ public final class URLBuilder {
                 parameters);
     }
 
+    // 使用URLBuilder中的参数, 构造一个URL返回
     public URL build() {
         if (StringUtils.isEmpty(username) && StringUtils.isNotEmpty(password)) {
             throw new IllegalArgumentException("Invalid url, password without username!");
         }
         port = port < 0 ? 0 : port;
         // trim the leading "/"
+        // 去掉path最前面的那些 "/"
         int firstNonSlash = 0;
         if (path != null) {
             while (firstNonSlash < path.length() && path.charAt(firstNonSlash) == '/') {
@@ -120,6 +123,7 @@ public final class URLBuilder {
                 path = path.substring(firstNonSlash);
             }
         }
+        // 构造URL返回
         return new URL(protocol, username, password, host, port, path, parameters);
     }
 
@@ -229,15 +233,17 @@ public final class URLBuilder {
         return addParameter(key, String.valueOf(value));
     }
 
+    // 给成员变量parameters添加entry
     public URLBuilder addParameter(String key, String value) {
         if (StringUtils.isEmpty(key) || StringUtils.isEmpty(value)) {
             return this;
         }
         // if value doesn't change, return immediately
+        // 若value值没变, 则直接返回当前URLBuilder对象
         if (value.equals(parameters.get(key))) { // value != null
             return this;
         }
-
+        // 新value覆盖原来的value
         parameters.put(key, value);
         return this;
     }
@@ -320,6 +326,7 @@ public final class URLBuilder {
         return removeParameters(keys.toArray(new String[0]));
     }
 
+    // 从成员变量parameters中移除keys
     public URLBuilder removeParameters(String... keys) {
         if (keys == null || keys.length == 0) {
             return this;

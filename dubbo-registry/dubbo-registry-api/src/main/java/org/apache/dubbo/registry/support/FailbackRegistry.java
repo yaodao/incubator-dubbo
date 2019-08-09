@@ -44,32 +44,43 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     /*  retry task map */
 
+    // 注册失败的URL集合
     private final ConcurrentMap<URL, FailedRegisteredTask> failedRegistered = new ConcurrentHashMap<URL, FailedRegisteredTask>();
 
+    // 取消注册 失败的URL集合
     private final ConcurrentMap<URL, FailedUnregisteredTask> failedUnregistered = new ConcurrentHashMap<URL, FailedUnregisteredTask>();
 
+    // 订阅失败的监听器集合
     private final ConcurrentMap<Holder, FailedSubscribedTask> failedSubscribed = new ConcurrentHashMap<Holder, FailedSubscribedTask>();
 
+    // 取消订阅失败的监听器集合
     private final ConcurrentMap<Holder, FailedUnsubscribedTask> failedUnsubscribed = new ConcurrentHashMap<Holder, FailedUnsubscribedTask>();
 
+    // 通知失败的URL集合
     private final ConcurrentMap<Holder, FailedNotifiedTask> failedNotified = new ConcurrentHashMap<Holder, FailedNotifiedTask>();
 
     /**
      * The time in milliseconds the retryExecutor will wait
      */
+    // 重试周期
     private final int retryPeriod;
 
     // Timer for failure retry, regular check if there is a request for failure, and if there is, an unlimited retry
+    // 定时器
     private final HashedWheelTimer retryTimer;
 
+    // 构造函数主要是创建失败重试的定时器，重试频率从URL取，如果没有设置，则默认为5000ms。
     public FailbackRegistry(URL url) {
         super(url);
+        // 取url中"retry.period"的值，若没有，则取默认值为5000ms
         this.retryPeriod = url.getParameter(Constants.REGISTRY_RETRY_PERIOD_KEY, Constants.DEFAULT_REGISTRY_RETRY_PERIOD);
 
         // since the retry task will not be very much. 128 ticks is enough.
+        // 生成一个定时器，定时器有128个格
         retryTimer = new HashedWheelTimer(new NamedThreadFactory("DubboRegistryRetryTimer", true), retryPeriod, TimeUnit.MILLISECONDS, 128);
     }
 
+    // 将url从注册失败的URL集合中移除
     public void removeFailedRegisteredTask(URL url) {
         failedRegistered.remove(url);
     }
@@ -93,22 +104,31 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         failedNotified.remove(h);
     }
 
+    // 将url和该url对应的任务 添加到注册失败的URL集合，并将url对应的任务放到定时器
+    // 该url对应的任务主要功能是：让url重新注册到zk
     private void addFailedRegistered(URL url) {
         FailedRegisteredTask oldOne = failedRegistered.get(url);
+        // 有该url对应的task对象，则不用再添加，直接返回
         if (oldOne != null) {
             return;
         }
+        // 为参数url新建一个task对象
         FailedRegisteredTask newTask = new FailedRegisteredTask(url, this);
+        // 将（url，task）添加到注册失败的URL集合
         oldOne = failedRegistered.putIfAbsent(url, newTask);
-        if (oldOne == null) {
+        if (oldOne == null) {// 返回值==nul表示failedRegistered中原来没有该url
+            // 添加到failedRegistered成功， 则将该任务添加到定时器中
             // never has a retry task. then start a new task for retry.
             retryTimer.newTimeout(newTask, retryPeriod, TimeUnit.MILLISECONDS);
         }
     }
 
+    // 从注册失败的URL集合中移除入参url，并设置该url对应的task的状态为已取消
     private void removeFailedRegistered(URL url) {
+        // 从failedRegistered中移除url， 并返回该url对应的task对象
         FailedRegisteredTask f = failedRegistered.remove(url);
         if (f != null) {
+            // 设置task的状态为已取消
             f.cancel();
         }
     }
@@ -126,34 +146,49 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    // 从取消注册 失败的URL集合中移除入参url，并设置该url对应的task的状态为已取消
     private void removeFailedUnregistered(URL url) {
         FailedUnregisteredTask f = failedUnregistered.remove(url);
         if (f != null) {
+            // 设置task的状态为已取消
             f.cancel();
         }
     }
 
+    /**
+     * 将（url，listener） 和对应的task添加到订阅失败的监听器集合（成员变量failedSubscribed中）
+     * 并将对应的task放到定时器中
+     * @param url 消费者url
+     * @param listener 该消费者拥有的监听器
+     */
     private void addFailedSubscribed(URL url, NotifyListener listener) {
         Holder h = new Holder(url, listener);
         FailedSubscribedTask oldOne = failedSubscribed.get(h);
+        // 已有该holder，直接返回
         if (oldOne != null) {
             return;
         }
+        // failedSubscribed中还没有该holder， 则添加进去
         FailedSubscribedTask newTask = new FailedSubscribedTask(url, this, listener);
         oldOne = failedSubscribed.putIfAbsent(h, newTask);
         if (oldOne == null) {
             // never has a retry task. then start a new task for retry.
+            // 将该holder对应的task放到定时器中
             retryTimer.newTimeout(newTask, retryPeriod, TimeUnit.MILLISECONDS);
         }
     }
 
+    // 从failedSubscribed 、failedUnsubscribed 、failedNotified删除该监听器
     private void removeFailedSubscribed(URL url, NotifyListener listener) {
         Holder h = new Holder(url, listener);
+        // 将该url从订阅失败的监听器集合中移除
         FailedSubscribedTask f = failedSubscribed.remove(h);
         if (f != null) {
             f.cancel();
         }
+        // 将该url从 取消订阅 失败的监听器集合中移除
         removeFailedUnsubscribed(url, listener);
+        // 将该url从 通知失败的URL集合中移除
         removeFailedNotified(url, listener);
     }
 
@@ -171,10 +206,12 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    // 将该url从 取消订阅 失败的监听器集合中移除，并设置该url对应的任务状态为取消
     private void removeFailedUnsubscribed(URL url, NotifyListener listener) {
         Holder h = new Holder(url, listener);
         FailedUnsubscribedTask f = failedUnsubscribed.remove(h);
         if (f != null) {
+            // 设置任务状态为取消
             f.cancel();
         }
     }
@@ -193,10 +230,12 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    // 将该url从 通知失败的URL集合中移除，并设置该url对应的任务状态为取消
     private void removeFailedNotified(URL url, NotifyListener listener) {
         Holder h = new Holder(url, listener);
         FailedNotifiedTask f = failedNotified.remove(h);
         if (f != null) {
+            // 设置任务状态为取消
             f.cancel();
         }
     }
@@ -222,17 +261,22 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     }
 
     @Override
+    // 向注册中心注册
     public void register(URL url) {
         super.register(url);
+        // 从失败的缓存中删除该url
         removeFailedRegistered(url);
         removeFailedUnregistered(url);
         try {
             // Sending a registration request to the server side
+            // 向注册中心发送一个注册请求
+            // 在zk上建立节点
             doRegister(url);
         } catch (Exception e) {
             Throwable t = e;
 
             // If the startup detection is opened, the Exception is thrown directly.
+            // 如果开启了启动时检测，则直接抛出异常
             boolean check = getUrl().getParameter(Constants.CHECK_KEY, true)
                     && url.getParameter(Constants.CHECK_KEY, true)
                     && !Constants.CONSUMER_PROTOCOL.equals(url.getProtocol());
@@ -247,17 +291,21 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 添加url到failedRegistered，并定时重试url对应的任务
             addFailedRegistered(url);
         }
     }
 
     @Override
+    // 取消注册
     public void unregister(URL url) {
         super.unregister(url);
+        // 从失败的缓存中删除该url
         removeFailedRegistered(url);
         removeFailedUnregistered(url);
         try {
             // Sending a cancellation request to the server side
+            // 向注册中心发送取消注册的请求
             doUnregister(url);
         } catch (Exception e) {
             Throwable t = e;
@@ -277,16 +325,24 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 加入到注册取消失败的缓存中
             addFailedUnregistered(url);
         }
     }
 
     @Override
+    /**
+     *
+     * @param url 消费者url
+     * @param listener 消费者url拥有的监听器
+     */
     public void subscribe(URL url, NotifyListener listener) {
         super.subscribe(url, listener);
+        // 从failedSubscribed 、failedUnsubscribed 、failedNotified删除该监听器
         removeFailedSubscribed(url, listener);
         try {
             // Sending a subscription request to the server side
+            // 向注册中心发送一个订阅的请求
             doSubscribe(url, listener);
         } catch (Exception e) {
             Throwable t = e;
@@ -365,23 +421,31 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     }
 
     @Override
+    // 将成员变量registered和subscribed中的元素添加到 成员变量failedRegistered和failedSubscribed中
+    // 并将每一个元素对应的任务添加到定时器中
     protected void recover() throws Exception {
         // register
+        // 已注册的服务的URL集合
         Set<URL> recoverRegistered = new HashSet<URL>(getRegistered());
         if (!recoverRegistered.isEmpty()) {
             if (logger.isInfoEnabled()) {
                 logger.info("Recover register url " + recoverRegistered);
             }
             for (URL url : recoverRegistered) {
+                // 将url和该url对应的任务 添加到注册失败的URL集合（成员变量failedRegistered中）
+                // 并将url对应的任务放到定时器
                 addFailedRegistered(url);
             }
         }
         // subscribe
+        // 已有的订阅信息， key是消费者url, value是该url对应的监听器集合(订阅端集合)
         Map<URL, Set<NotifyListener>> recoverSubscribed = new HashMap<URL, Set<NotifyListener>>(getSubscribed());
         if (!recoverSubscribed.isEmpty()) {
             if (logger.isInfoEnabled()) {
                 logger.info("Recover subscribe url " + recoverSubscribed.keySet());
             }
+            // 遍历每一条订阅信息，将其添加到订阅失败的监听器集合（成员变量failedSubscribed中）
+            // 并将url对应的task放到定时器中
             for (Map.Entry<URL, Set<NotifyListener>> entry : recoverSubscribed.entrySet()) {
                 URL url = entry.getKey();
                 for (NotifyListener listener : entry.getValue()) {
@@ -407,6 +471,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     public abstract void doUnsubscribe(URL url, NotifyListener listener);
 
+    // 相当于pair， 存放（url， 监听器），url应该是消费者url
     static class Holder {
 
         private final URL url;
@@ -427,6 +492,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
 
         @Override
+        // url和notifyListener都相等，两个Holder对象才相等
         public boolean equals(Object obj) {
             if (obj instanceof Holder) {
                 Holder h = (Holder) obj;

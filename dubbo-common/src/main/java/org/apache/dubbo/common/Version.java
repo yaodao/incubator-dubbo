@@ -141,6 +141,7 @@ public final class Version {
         return "";
     }
 
+    // 获取cls所在jar包的版本号, 例如: cls=String.class 返回 "1.8.0_60"
     public static String getVersion(Class<?> cls, String defaultVersion) {
         try {
             // find version info from MANIFEST.MF first

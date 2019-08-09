@@ -49,6 +49,7 @@ public class SimpleDataStore implements DataStore {
     }
 
     @Override
+    // 将 entry=(componentName, (key, value)) 添加到 成员变量data中
     public void put(String componentName, String key, Object value) {
         Map<String, Object> componentData = data.get(componentName);
         if (null == componentData) {

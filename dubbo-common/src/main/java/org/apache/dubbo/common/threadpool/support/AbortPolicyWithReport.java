@@ -54,7 +54,9 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
     }
 
     @Override
+    // 线程池拒绝执行任务时, 会先log下当前的线程池情况, 再把JVM中具体的线程信息输出到文件中
     public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
+        // 大概意思: 线程池被耗尽, 列出: 当前被拒绝执行的线程名字, 当前线程池的各种参数
         String msg = String.format("Thread pool is EXHAUSTED!" +
                         " Thread Name: %s, Pool Size: %d (active: %d, core: %d, max: %d, largest: %d), Task: %d (completed: %d)," +
                         " Executor status:(isShutdown:%s, isTerminated:%s, isTerminating:%s), in %s://%s:%d!",
@@ -66,24 +68,38 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
         throw new RejectedExecutionException(msg);
     }
 
+    // 把类似jstack命令的结果 输出到文件, 每10分钟输出一次
+
+    /**
+     *  把类似jstack命令的结果 输出到文件
+     *  若本方法被多次调用, 则限制每10分钟才能被调用一次
+     *
+     */
     private void dumpJStack() {
         long now = System.currentTimeMillis();
 
         //dump every 10 minutes
+        // 限制只能每10分钟输出一次
         if (now - lastPrintTime < 10 * 60 * 1000) {
             return;
         }
-
+        // 在多线程情况下, 这里保证只有一个线程能继续向下执行, 其他的返回 (只有一个线程可以写文件)
+        // 获取信号量
         if (!guard.tryAcquire()) {
             return;
         }
 
+        // 因为要写文件, 为了不影响性能, 所以新开线程池去写文件
         ExecutorService pool = Executors.newSingleThreadExecutor();
         pool.execute(() -> {
+            // 取url的参数"dump.directory"对应的值, 若没有则取系统环境中"user.home"对应的值
+            // 就是个文件存放的路径
             String dumpPath = url.getParameter(Constants.DUMP_DIRECTORY, System.getProperty("user.home"));
 
             SimpleDateFormat sdf;
 
+            // 获取当前操作系统名,  就是为了后面生成一个日期字符串
+            // 例如: "windows 7"
             String os = System.getProperty("os.name").toLowerCase();
 
             // window system don't support ":" in file name
@@ -93,6 +109,7 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
                 sdf = new SimpleDateFormat("yyyy-MM-dd_HH:mm:ss");
             }
 
+            // 日志文件名的后缀
             String dateStr = sdf.format(new Date());
             //try-with-resources
             try (FileOutputStream jStackStream = new FileOutputStream(new File(dumpPath, "Dubbo_JStack.log" + "." + dateStr))) {
@@ -100,6 +117,7 @@ public class AbortPolicyWithReport extends ThreadPoolExecutor.AbortPolicy {
             } catch (Throwable t) {
                 logger.error("dump jStack error", t);
             } finally {
+                // 释放信号量
                 guard.release();
             }
             lastPrintTime = System.currentTimeMillis();

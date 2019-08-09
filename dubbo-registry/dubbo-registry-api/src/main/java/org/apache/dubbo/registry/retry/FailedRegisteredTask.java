@@ -34,7 +34,9 @@ public final class FailedRegisteredTask extends AbstractRetryTask {
 
     @Override
     protected void doRetry(URL url, FailbackRegistry registry, Timeout timeout) {
+        // 根据url的属性值，得到一个url字符串，依据该字符串，在zk上创建一系列节点
         registry.doRegister(url);
+        // 将url从注册失败的URL集合中移除
         registry.removeFailedRegisteredTask(url);
     }
 }

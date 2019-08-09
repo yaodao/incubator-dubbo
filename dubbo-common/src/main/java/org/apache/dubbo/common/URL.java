@@ -327,7 +327,7 @@ class URL implements Serializable {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
-
+    // 使用utf-8编码decode参数value
     public static String decode(String value) {
         if (StringUtils.isEmpty(value)) {
             return "";
@@ -388,6 +388,7 @@ class URL implements Serializable {
      *
      * @return ip in string format
      */
+    // 通过hostname获取ip
     public String getIp() {
         if (ip == null) {
             ip = NetUtils.getIpByHost(host);
@@ -413,7 +414,8 @@ class URL implements Serializable {
         return port <= 0 ? host : host + ":" + port;
     }
 
-    // 从参数address中提取出host和port, 赋值给成员变量host和port
+    // 提取参数address中的host和port, 并和其他成员变量一起生成一个新的URL对象
+    // 返回一个新的URL对象
     public URL setAddress(String address) {
         int i = address.lastIndexOf(':');
         String host;
@@ -452,12 +454,17 @@ class URL implements Serializable {
         return address.toString();
     }
 
+    // 返回服务的 主地址 和 backup们， 对应的url对象集合
     public List<URL> getBackupUrls() {
         List<URL> urls = new ArrayList<>();
+        // 当前url添加到返回的集合中（主地址的url对象）
         urls.add(this);
+        // 得到当前url对象的key="backup"对应的value值 （从parameters中取）
         String[] backups = getParameter(Constants.BACKUP_KEY, new String[0]);
+        // 若当前url有backup值
         if (backups != null && backups.length > 0) {
             for (String backup : backups) {
+                // 一个backup生成一个新的URL对象加入集合 （各个url对象之间 只有host和port不同）
                 urls.add(this.setAddress(backup));
             }
         }
@@ -506,7 +513,7 @@ class URL implements Serializable {
         return decode(getParameter(key, defaultValue));
     }
 
-    // 从成员变量parameters中, 取key对应的value值, 若为空, 再用default.key取parameters中的value值
+    // 从成员变量parameters中, 取key对应的value值, 若为空, 再用"default.{key}"取parameters中的value值
     public String getParameter(String key) {
         String value = parameters.get(key);
         if (StringUtils.isEmpty(value)) {
@@ -525,8 +532,8 @@ class URL implements Serializable {
     }
 
     // 从成员变量parameters中, 取key对应的value值, 若value为空, 返回参数defaultValue
-    // 举例: 串"backup=zkserver2.vko.cn:2181,zkserver3.vko.cn:2181"
-    // 当key="backup" 返回值 为 ["zkserver2.vko.cn:2181", "zkserver3.vko.cn:2181"]
+    // 举例： 当key="backup"时， 对应的value值为"zkserver2.vko.cn:2181,zkserver3.vko.cn:2181"
+    // 经过本函数处理后，返回值为 ["zkserver2.vko.cn:2181", "zkserver3.vko.cn:2181"]
     public String[] getParameter(String key, String[] defaultValue) {
         // 从成员变量parameters中, 取key对应的value值
         String value = getParameter(key);
@@ -976,6 +983,7 @@ class URL implements Serializable {
         return NetUtils.isLocalHost(host) || getParameter(Constants.LOCALHOST_KEY, false);
     }
 
+    // url的成员变量 host是"0.0.0.0" 或者 url的成员变量parameters中"anyhost"对应的value是true,  则返回true
     public boolean isAnyHost() {
         return Constants.ANYHOST_VALUE.equals(host) || getParameter(Constants.ANYHOST_KEY, false);
     }
@@ -1040,6 +1048,7 @@ class URL implements Serializable {
         return addParameter(key, String.valueOf(value));
     }
 
+    // 为成员变量parameters添加新的entry， 使用该parameters生成一个新的URL对象返回
     public URL addParameter(String key, String value) {
         if (StringUtils.isEmpty(key)
                 || StringUtils.isEmpty(value)) {
@@ -1050,8 +1059,10 @@ class URL implements Serializable {
             return this;
         }
 
+        // 生成一个新的map, 包含原有parameters中的元素
         Map<String, String> map = new HashMap<>(getParameters());
         map.put(key, value);
+        // 使用新的map生成一个新的URL对象返回
         return new URL(protocol, username, password, host, port, path, map);
     }
 
@@ -1240,10 +1251,14 @@ class URL implements Serializable {
         return buildString(true, false, parameters); // only return identity message, see the method "equals" and "hashCode"
     }
 
+    // 若成员变量full已经有值，则直接返回full，否则构造一个串给full赋值， 并返回
+    // 返回串类似  protocol://username:password@host:port?key1=value1&key2=value2
     public String toFullString() {
         if (full != null) {
             return full;
         }
+        // 返回包含username和参数对的字符串
+        // 类似 protocol://username:password@host:port?key1=value1&key2=value2
         return full = buildString(true, true);
     }
 
@@ -1264,10 +1279,21 @@ class URL implements Serializable {
         return buf.toString();
     }
 
+    /**
+     * 将入参parameters中的key，以key=value的形式附加到buf后面 （value从成员变量parameters中根据key获取）
+     * 最后，
+     * 当concat=true时 buf串类似 ?key1=value1&key2=value2
+     * 当concat=false时 buf串类似 key1=value1&key2=value2
+     *
+     * @param buf 返回的字符串
+     * @param concat 控制返回的串是否带问号
+     * @param parameters key的数组
+     */
     private void buildParameters(StringBuilder buf, boolean concat, String[] parameters) {
         if (CollectionUtils.isNotEmptyMap(getParameters())) {
             List<String> includes = (ArrayUtils.isEmpty(parameters) ? null : Arrays.asList(parameters));
             boolean first = true;
+            // 使用入参parameters中的key，到成员变量parameters中取对应的value，最后形成key=value的串
             for (Map.Entry<String, String> entry : new TreeMap<>(getParameters()).entrySet()) {
                 if (entry.getKey() != null && entry.getKey().length() > 0
                         && (includes == null || includes.contains(entry.getKey()))) {
@@ -1291,12 +1317,17 @@ class URL implements Serializable {
         return buildString(appendUser, appendParameter, false, false, parameters);
     }
 
+    // 返回字符串类似  protocol://username:password@host:port/group/interfaceName:version?key1=value1&key2=value2
+    // 其中的每个英文单词都需要替换成值真实值， 这里就是表示一下而已
+    // useIP为true则使用ip地址， 为false则使用主机名
     private String buildString(boolean appendUser, boolean appendParameter, boolean useIP, boolean useService, String... parameters) {
         StringBuilder buf = new StringBuilder();
+        // protocol://
         if (StringUtils.isNotEmpty(protocol)) {
             buf.append(protocol);
             buf.append("://");
         }
+        // protocol://username:password@
         if (appendUser && StringUtils.isNotEmpty(username)) {
             buf.append(username);
             if (password != null && password.length() > 0) {
@@ -1311,6 +1342,7 @@ class URL implements Serializable {
         } else {
             host = getHost();
         }
+        //  protocol://username:password@host:port
         if (host != null && host.length() > 0) {
             buf.append(host);
             if (port > 0) {
@@ -1320,16 +1352,19 @@ class URL implements Serializable {
         }
         String path;
         if (useService) {
+            // 得到字符串 "{group}/{interfaceName}:{version}"
             path = getServiceKey();
         } else {
             path = getPath();
         }
+        // protocol://username:password@host:port/group/interfaceName:version
         if (path != null && path.length() > 0) {
             buf.append("/");
             buf.append(path);
         }
-
+        // protocol://username:password@host:port/group/interfaceName:version?key1=value1&key2=value2
         if (appendParameter) {
+            // buf类似 "?key1=value1&key2=value2" ,其中key是入参parameters中
             buildParameters(buf, true, parameters);
         }
         return buf.toString();
@@ -1362,8 +1397,9 @@ class URL implements Serializable {
      * The format of return value is '{group}/{interfaceName}:{version}'
      * @return
      */
-    // 返回字符串 "{group}/{interfaceName}:{version}", 其中 inf就是{interfaceName}
+    // 返回字符串 "{group}/{interfaceName}:{version}"
     public String getServiceKey() {
+        // inf就是{interfaceName}
         String inf = getServiceInterface();
         if (inf == null) {
             return null;
@@ -1384,6 +1420,7 @@ class URL implements Serializable {
     }
 
     // 返回字符串 "{group}/{interfaceName}:{version}", 其中 {interfaceName}就是path
+    // 其中{}表示该位置的值需要被替换
     public static String buildKey(String path, String group, String version) {
         StringBuilder buf = new StringBuilder();
         if (group != null && group.length() > 0) {
@@ -1395,8 +1432,9 @@ class URL implements Serializable {
         }
         return buf.toString();
     }
-
+    // 返回字符串类似 protocol://username:password@host:port/group/interfaceName:version
     public String toServiceStringWithoutResolving() {
+        // 得到字符串类似 protocol://username:password@host:port/group/interfaceName:version
         return buildString(true, false, false, true);
     }
 
@@ -1410,7 +1448,7 @@ class URL implements Serializable {
     }
 
     public String getServiceInterface() {
-        // 从成员变量parameters中, 取key="interface" 对应的value值. 若为空, 则返回默认值path
+        // 从成员变量parameters中, 取key="interface" 对应的value值, 值是接口的全名. 若为空, 则返回默认值path
         return getParameter(Constants.INTERFACE_KEY, path);
     }
 
@@ -1515,12 +1553,17 @@ class URL implements Serializable {
     }
 
     @Override
+    // 使用host, parameters, password等字段的hash值, 一起计算得到一个整数值
     public int hashCode() {
         final int prime = 31;
         int result = 1;
+        // result= 31 + tem1
         result = prime * result + ((host == null) ? 0 : host.hashCode());
+        // result= 31*(31 + tem1) + tem2 = 31^2 + 31*tem1 + tem2
         result = prime * result + ((parameters == null) ? 0 : parameters.hashCode());
+        // result= 31*(31^2 + 31*tem1 + tem2) = 31^3 + 31^2*tem1 + 31*tem2 + tem3
         result = prime * result + ((password == null) ? 0 : password.hashCode());
+        // 类似, 将上一步得到的result乘上31, 就可以了
         result = prime * result + ((path == null) ? 0 : path.hashCode());
         result = prime * result + port;
         result = prime * result + ((protocol == null) ? 0 : protocol.hashCode());
