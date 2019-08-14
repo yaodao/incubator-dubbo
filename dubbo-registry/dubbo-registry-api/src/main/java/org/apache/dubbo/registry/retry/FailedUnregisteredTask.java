@@ -34,7 +34,9 @@ public final class FailedUnregisteredTask extends AbstractRetryTask {
 
     @Override
     protected void doRetry(URL url, FailbackRegistry registry, Timeout timeout) {
+        // 删除url在zk上的节点
         registry.doUnregister(url);
+        //  将url从 取消注册 失败的URL集合中移除
         registry.removeFailedUnregisteredTask(url);
     }
 }

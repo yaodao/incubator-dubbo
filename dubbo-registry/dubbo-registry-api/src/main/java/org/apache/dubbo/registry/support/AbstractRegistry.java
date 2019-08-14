@@ -88,7 +88,7 @@ public abstract class AbstractRegistry implements Registry {
     // 记录已经注册服务的URL集合，注册的URL不仅仅可以是服务提供者的，也可以是服务消费者的。
     // 已注册的服务的URL集合
     private final Set<URL> registered = new ConcurrentHashSet<>();
-    // key是消费者url, value是该url对应的监听器集合(订阅端集合)
+    // key是消费者url, value是该url对应的监听器集合
     private final ConcurrentMap<URL, Set<NotifyListener>> subscribed = new ConcurrentHashMap<>();
     // 最外部URL的key是消费者的URL,value是一个map，map的key为服务的分类名，value是该分类下的服务url集合。分类名就是 url的"category"属性值
     private final ConcurrentMap<URL, Map<String, List<URL>>> notified = new ConcurrentHashMap<>();
@@ -287,6 +287,7 @@ public abstract class AbstractRegistry implements Registry {
      * @param url 消费者url
      * @return
      */
+    // 获取缓存properties中，参数url对应的 服务提供者url的集合
     public List<URL> getCacheUrls(URL url) {
         // 由入参url得到一个字符串 "{group}/{interfaceName}:{version}"
         // 从properties取出该字符串对应的value值， 这个值是以空格分隔的多个服务url字符串。(多个服务url串是在saveProperties()函数中添加到properties中)
@@ -336,7 +337,7 @@ public abstract class AbstractRegistry implements Registry {
              *                 }
              *             };
              */
-            // todo 这个监听器是针对所有的 服务提供者url的监听器么？？
+            // todo 这个监听器是针对所有的 服务提供者url的监听器么？？ 应该是
             NotifyListener listener = reference::set;
             subscribe(url, listener); // Subscribe logic guarantees the first notify to return
             List<URL> urls = reference.get();
@@ -377,7 +378,10 @@ public abstract class AbstractRegistry implements Registry {
 
     @Override
     /**
-     * subscribed中增加一个监听器listener， 该监听器是属于参数url的
+     * 为参数url，新增加一个监听器listener（其实就是url又订阅了一个服务，针对这个服务的监听器是listener）
+     *
+     * 将（url，url所拥有的新的监听器listener） 添加到成员变量subscribed中
+     * 当前对象的成员变量subscribed中增加一个监听器listener， 该监听器是属于参数url的
      *
      * @param url      消费者url, e.g. consumer://10.20.153.10/org.apache.dubbo.foo.BarService?version=1.0.0&application=kylin
      * @param listener A listener of the change event, not allowed to be empty
@@ -399,7 +403,7 @@ public abstract class AbstractRegistry implements Registry {
     }
 
     @Override
-    // 移除消费者url所拥有的某个监听器listener
+    // 从成员变量subscribed中 移除消费者url所拥有的某个监听器listener
     public void unsubscribe(URL url, NotifyListener listener) {
         if (url == null) {
             throw new IllegalArgumentException("unsubscribe url == null");
@@ -488,13 +492,17 @@ public abstract class AbstractRegistry implements Registry {
 
     /**
      * Notify changes from the Provider side.
-     * 通知监听器，服务提供者URL的变化信息
+     * 通知监听器listener，服务提供者URL的变化信息
+     * 主要完成以下功能：
+     * 1、将参数urls中 与消费者url匹配的服务提供者url进行分类，分类到map中，map的key是服务url中的"category"值， value是相同"category"的服务url的集合
+     * 2、根据参数urls的分类结果，更新成员变量notified的内容
+     * 3、将分组的服务提供者URL推送给监听器listener
+     * 4、更新缓存properties和本地文件内容
      *
      * @param url      consumer side url 消费者url
-     * @param listener listener 监听器（订阅端）
+     * @param listener listener 监听器
      * @param urls     provider latest urls (最新的服务提供者url集合)
      */
-    // notify是将一组服务URL推送给订阅了该服务URL的监听器。在推送的时候，会将服务url根据cateogry分组，之后再按分组推送。
     protected void notify(URL url, NotifyListener listener, List<URL> urls) {
         if (url == null) {
             throw new IllegalArgumentException("notify url == null");
@@ -511,14 +519,13 @@ public abstract class AbstractRegistry implements Registry {
             logger.info("Notify urls for subscribe url " + url + ", urls: " + urls);
         }
         // keep every provider's category.
-        // 将urls中 与消费者url匹配的服务提供者url进行分类，
-        // result的 key是服务url中的"category"值， value是相同"category"的服务url的集合
+        // 将参数urls进行分类， 分类到result，result的key是"{category}",value是该种类的url集合（将urls中 与消费者url匹配的服务提供者url进行分类）
+        // 注意： result是服务提供者的分类
         Map<String, List<URL>> result = new HashMap<>();
         for (URL u : urls) {
             // 将与消费者url匹配的服务提供者u进行分类
-            // 先按照u中key为category对应的值进行分类，如果没有该值，就找key为"providers"的值进行分类
             if (UrlUtils.isMatch(url, u)) {
-                // 取url
+                // category= url中的"category"属性值 或者 category= "providers" （默认值）
                 String category = u.getParameter(Constants.CATEGORY_KEY, Constants.DEFAULT_CATEGORY);
                 List<URL> categoryList = result.computeIfAbsent(category, k -> new ArrayList<>());
                 categoryList.add(u);
@@ -528,26 +535,26 @@ public abstract class AbstractRegistry implements Registry {
             return;
         }
 
-        // 获取消费者url对应的 服务者url集合 （得到的map中，key是服务url中的"category"值， value是相同"category"的服务url的集合）
+        // 获取消费者url对应的 服务提供者url集合 （得到的map中，key是服务url中的"category"值， value是相同"category"的服务url的集合）
         Map<String, List<URL>> categoryNotified = notified.computeIfAbsent(url, u -> new ConcurrentHashMap<>());
 
         // 因为服务提供者url的按cateogry分组的， 这里就按组推送服务提供者URL的变化给服务订阅者
         for (Map.Entry<String, List<URL>> entry : result.entrySet()) {
             String category = entry.getKey();
             List<URL> categoryList = entry.getValue();
-            // 更新该category对应的服务url集合值
+            // 更新该category对应的服务提供者url集合值
             categoryNotified.put(category, categoryList);
             // 将一组服务提供者URL推送给订阅了该URL的监听器。这里已经是按cateogry分组推送了
             listener.notify(categoryList);
             // We will update our cache file after each notification.
             // When our Registry has a subscribe failure due to network jitter, we can return at least the existing cache URL.
-            // 每个分组调用一次
+            // 更新缓存properties和本地文件内容（每个分组调用一次，为什么这么频繁每个分组调一次，参见上面英文）
             saveProperties(url);
         }
     }
 
     /**
-     * 将入参url对应的服务者url信息新增到properties中， 并保存properties到本地文件
+     * 将入参url对应的服务者url信息更新到properties中， 并保存properties到本地文件
      * key是"{group}/{interfaceName}:{version}"， 其中值由入参url提供
      * @param url 消费者url
      */
@@ -561,6 +568,7 @@ public abstract class AbstractRegistry implements Registry {
             // 获得消费者url对应的map，key为分类名，value是该分类下的服务者url集合
             Map<String, List<URL>> categoryNotified = notified.get(url);
             if (categoryNotified != null) {
+                // 不分类别的把所有服务提供者的url转成串，连接起来，用空格隔开
                 // 将该消费url对应的 不分类别的所有的服务者url转成服务者的串，不同url转成的串之间用空格隔开
                 for (List<URL> us : categoryNotified.values()) {
                     for (URL u : us) {

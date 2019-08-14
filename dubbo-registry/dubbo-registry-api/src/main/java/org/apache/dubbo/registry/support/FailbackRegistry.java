@@ -69,7 +69,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     // 定时器
     private final HashedWheelTimer retryTimer;
 
-    // 构造函数主要是创建失败重试的定时器，重试频率从URL取，如果没有设置，则默认为5000ms。
+    // 构造函数主要是创建定时器用于失败重试，重试频率从URL取，如果没有设置，则默认为5000ms。
     public FailbackRegistry(URL url) {
         super(url);
         // 取url中"retry.period"的值，若没有，则取默认值为5000ms
@@ -85,6 +85,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         failedRegistered.remove(url);
     }
 
+    // 将url从 取消注册 失败的URL集合中移除
     public void removeFailedUnregisteredTask(URL url) {
         failedUnregistered.remove(url);
     }
@@ -105,7 +106,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
     }
 
     // 将url和该url对应的任务 添加到注册失败的URL集合，并将url对应的任务放到定时器
-    // 该url对应的任务主要功能是：让url重新注册到zk
+    // 该url对应的任务主要功能是：根据url的信息，重新在zk上创建一系列节点
     private void addFailedRegistered(URL url) {
         FailedRegisteredTask oldOne = failedRegistered.get(url);
         // 有该url对应的task对象，则不用再添加，直接返回
@@ -132,7 +133,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             f.cancel();
         }
     }
-
+    // 将（url， url对应的task）加入到注册取消失败的缓存中（成员变量failedUnregistered），并将task放到定时器中
     private void addFailedUnregistered(URL url) {
         FailedUnregisteredTask oldOne = failedUnregistered.get(url);
         if (oldOne != null) {
@@ -142,6 +143,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         oldOne = failedUnregistered.putIfAbsent(url, newTask);
         if (oldOne == null) {
             // never has a retry task. then start a new task for retry.
+            // 将该url对应的task放到定时器中
             retryTimer.newTimeout(newTask, retryPeriod, TimeUnit.MILLISECONDS);
         }
     }
@@ -168,8 +170,9 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         if (oldOne != null) {
             return;
         }
-        // failedSubscribed中还没有该holder， 则添加进去
+        // 生成一个订阅失败任务对象
         FailedSubscribedTask newTask = new FailedSubscribedTask(url, this, listener);
+        // failedSubscribed中还没有该holder， 则添加进去
         oldOne = failedSubscribed.putIfAbsent(h, newTask);
         if (oldOne == null) {
             // never has a retry task. then start a new task for retry.
@@ -184,6 +187,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         // 将该url从订阅失败的监听器集合中移除
         FailedSubscribedTask f = failedSubscribed.remove(h);
         if (f != null) {
+            // 设置任务状态为取消
             f.cancel();
         }
         // 将该url从 取消订阅 失败的监听器集合中移除
@@ -192,16 +196,20 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         removeFailedNotified(url, listener);
     }
 
+    // 将（url，listener） 和对应的task添加到取消订阅失败的监听器集合（成员变量failedUnsubscribed中）
     private void addFailedUnsubscribed(URL url, NotifyListener listener) {
         Holder h = new Holder(url, listener);
+        // 从 取消订阅失败的监听器集合中取h对应的task
         FailedUnsubscribedTask oldOne = failedUnsubscribed.get(h);
         if (oldOne != null) {
             return;
         }
+        // 新建一个task
         FailedUnsubscribedTask newTask = new FailedUnsubscribedTask(url, this, listener);
         oldOne = failedUnsubscribed.putIfAbsent(h, newTask);
         if (oldOne == null) {
             // never has a retry task. then start a new task for retry.
+            // 将该holder对应的task放到定时器中
             retryTimer.newTimeout(newTask, retryPeriod, TimeUnit.MILLISECONDS);
         }
     }
@@ -216,12 +224,14 @@ public abstract class FailbackRegistry extends AbstractRegistry {
         }
     }
 
+    // 将（参数url，task）添加到通知失败的URL集合（成员变量failedNotified），并将参数url对应的任务放到定时器中
     private void addFailedNotified(URL url, NotifyListener listener, List<URL> urls) {
         Holder h = new Holder(url, listener);
         FailedNotifiedTask newTask = new FailedNotifiedTask(url, listener);
         FailedNotifiedTask f = failedNotified.putIfAbsent(h, newTask);
         if (f == null) {
             // never has a retry task. then start a new task for retry.
+            // 将服务提供者的urls添加到task对象的成员变量urls中
             newTask.addUrlToRetry(urls);
             retryTimer.newTimeout(newTask, retryPeriod, TimeUnit.MILLISECONDS);
         } else {
@@ -332,11 +342,14 @@ public abstract class FailbackRegistry extends AbstractRegistry {
 
     @Override
     /**
+     * 为url新增一个监听器listener（就是url又订阅了一个新的服务）
+     *
      *
      * @param url 消费者url
-     * @param listener 消费者url拥有的监听器
+     * @param listener 监听器
      */
     public void subscribe(URL url, NotifyListener listener) {
+        // 为参数url 新增加一个监听器listener 到subscribed中
         super.subscribe(url, listener);
         // 从failedSubscribed 、failedUnsubscribed 、failedNotified删除该监听器
         removeFailedSubscribed(url, listener);
@@ -346,7 +359,9 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             doSubscribe(url, listener);
         } catch (Exception e) {
             Throwable t = e;
+            // 订阅失败的时候，调用notify函数， 将最新的服务提供者urls信息,推送给订阅了该服务的监听器listener
 
+            // 获取消费者url对应的 服务提供者url的集合（从缓存properties中取）
             List<URL> urls = getCacheUrls(url);
             if (CollectionUtils.isNotEmpty(urls)) {
                 notify(url, listener, urls);
@@ -367,16 +382,20 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 将（url，listener） 和对应的task添加到成员变量failedSubscribed中（订阅失败的监听器集合）,并将对应的task放到定时器中
             addFailedSubscribed(url, listener);
         }
     }
 
     @Override
+    // 取消订阅url所拥有的某个监听器listener
     public void unsubscribe(URL url, NotifyListener listener) {
+        // 移除消费者url所拥有的某个监听器listener
         super.unsubscribe(url, listener);
         removeFailedSubscribed(url, listener);
         try {
             // Sending a canceling subscription request to the server side
+            // 移除url所拥有的单个监听器listener
             doUnsubscribe(url, listener);
         } catch (Exception e) {
             Throwable t = e;
@@ -395,11 +414,13 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
 
             // Record a failed registration request to a failed list, retry regularly
+            // 将（url，listener） 和对应的task添加到取消订阅失败的监听器集合（成员变量failedUnsubscribed中）
             addFailedUnsubscribed(url, listener);
         }
     }
 
     @Override
+    // 将最新的服务提供者urls信息,推送给订阅了该服务的监听器listener
     protected void notify(URL url, NotifyListener listener, List<URL> urls) {
         if (url == null) {
             throw new IllegalArgumentException("notify url == null");
@@ -408,14 +429,17 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             throw new IllegalArgumentException("notify listener == null");
         }
         try {
+            // 将最新的服务提供者urls信息，推送给订阅了该服务的监听器listener
             doNotify(url, listener, urls);
         } catch (Exception t) {
             // Record a failed registration request to a failed list, retry regularly
+            // 将（参数url，task）添加到通知失败的URL集合， 并将task添加到定时器
             addFailedNotified(url, listener, urls);
             logger.error("Failed to notify for subscribe " + url + ", waiting for retry, cause: " + t.getMessage(), t);
         }
     }
 
+    // 将最新的服务提供者urls信息，推送给订阅了该服务的监听器listener
     protected void doNotify(URL url, NotifyListener listener, List<URL> urls) {
         super.notify(url, listener, urls);
     }
@@ -438,7 +462,7 @@ public abstract class FailbackRegistry extends AbstractRegistry {
             }
         }
         // subscribe
-        // 已有的订阅信息， key是消费者url, value是该url对应的监听器集合(订阅端集合)
+        // 已有的订阅信息， key是消费者url, value是该url所拥有的监听器集合（其实就是该url订阅了其他的服务者url）
         Map<URL, Set<NotifyListener>> recoverSubscribed = new HashMap<URL, Set<NotifyListener>>(getSubscribed());
         if (!recoverSubscribed.isEmpty()) {
             if (logger.isInfoEnabled()) {

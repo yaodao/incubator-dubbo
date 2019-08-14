@@ -23,9 +23,13 @@ import java.util.List;
 public interface ChildListener {
 
     /**
+     * 当子节点有变化时，childChanged方法会被调用，（由谁来触发调用，暂时不清楚）
+     * childChanged方法的具体实现就是，当子节点有变化时要进行的那些处理逻辑
+     *
+     *
      *
      * @param path 监听的节点
-     * @param children 监听的节点的所有子节点
+     * @param children path下的所有子节点
      */
     void childChanged(String path, List<String> children);
 

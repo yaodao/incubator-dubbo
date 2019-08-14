@@ -147,8 +147,10 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
+    // 返回path下的所有子节点
     public List<String> getChildren(String path) {
         try {
+            // 获取path下的所有子节点
             return client.getChildren().forPath(path);
         } catch (NoNodeException e) {
             return null;
@@ -199,6 +201,8 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     @Override
     public List<String> addTargetChildListener(String path, CuratorWatcherImpl listener) {
         try {
+            //添加监听，并且返回这个目录当前所有子节点
+            //这种监听方式是一次性的，在参数listener实现中会再次执行监听逻辑
             return client.getChildren().usingWatcher(listener).forPath(path);
         } catch (NoNodeException e) {
             return null;
@@ -243,7 +247,9 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
+    // 将Cruator监听器(targetListener)和它对应的子节点监听器的联系断开
     public void removeTargetChildListener(String path, CuratorWatcherImpl listener) {
+        // 就是将入参listener对象中的成员变量childListener置空
         listener.unwatch();
     }
 

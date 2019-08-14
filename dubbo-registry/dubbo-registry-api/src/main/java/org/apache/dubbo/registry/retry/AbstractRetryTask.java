@@ -43,6 +43,7 @@ public abstract class AbstractRetryTask implements TimerTask {
 
     /**
      * registry for this task
+     * 生成当前这个task对象的registry对象 （也就是由这个registry对象主动new了一个该类型的task对象）
      */
     protected final FailbackRegistry registry;
 

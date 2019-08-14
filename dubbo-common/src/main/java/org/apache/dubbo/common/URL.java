@@ -1127,16 +1127,19 @@ class URL implements Serializable {
         return new URL(protocol, username, password, host, port, path, map);
     }
 
+    // 将参数pairs中的元素，按对插入成员变量parameters中
     public URL addParameters(String... pairs) {
         if (pairs == null || pairs.length == 0) {
             return this;
         }
+        // pairs长度必须是偶数
         if (pairs.length % 2 != 0) {
             throw new IllegalArgumentException("Map pairs can not be odd number.");
         }
         Map<String, String> map = new HashMap<>();
         int len = pairs.length / 2;
         for (int i = 0; i < len; i++) {
+            // 按对插入map， 前面的参数是key 后面的参数是value
             map.put(pairs[2 * i], pairs[2 * i + 1]);
         }
         return addParameters(map);
@@ -1253,6 +1256,7 @@ class URL implements Serializable {
 
     // 若成员变量full已经有值，则直接返回full，否则构造一个串给full赋值， 并返回
     // 返回串类似  protocol://username:password@host:port?key1=value1&key2=value2
+    // 这个返回串是在各个项都有的情况下， 如果某一项没有就不显示。
     public String toFullString() {
         if (full != null) {
             return full;

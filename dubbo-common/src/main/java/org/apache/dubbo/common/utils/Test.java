@@ -252,11 +252,16 @@ public class Test {
     public static void main(String[] args) {
         ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
         map.put("aa","aa11");
-        map.put("bb","bb");
+        map.put("bb","bb11");
         System.out.println(map);
 
-        String res = map.putIfAbsent("cc","cc");
+//        String res = map.putIfAbsent("cc","cc");
+//        String res = map.computeIfAbsent("cc",k-> {return "cc";});
+        String res = map.computeIfAbsent("bb",k-> {return "cc";});
+//        map.put("dd",null);
         System.out.println(map);
         System.out.println(res);
+
+        System.out.println("\\aabb".lastIndexOf("\\"));
     }
 }

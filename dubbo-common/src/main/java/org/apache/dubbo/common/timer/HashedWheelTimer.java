@@ -351,6 +351,7 @@ public class HashedWheelTimer implements Timer {
                 break;
             case WORKER_STATE_STARTED:
                 // 若woker线程已经启动, 则保持, 无操作
+                // （这里我认为是因为已经启动了worker线程，worker线程就会一直死循环的遍历执行任务，除非timer显式终止worker，所以这里就不用再启动新的worker线程）
                 break;
             case WORKER_STATE_SHUTDOWN:
                 // 任务一旦停止就不能再启动
@@ -430,7 +431,10 @@ public class HashedWheelTimer implements Timer {
      * 2.启动当前timer对象中worker任务所在的线程, 让worker任务去消费圆盘中的任务 (worker取出圆盘中的timeout对象, 执行timeout对象中的task属性的run方法)
      * 大体上来说就是: timer对象会使用newTimeout()生产timeout对象, worker任务线程就去消费这些timeout对象
      *
-     * worker线程是一个单独的线程，不在线程池里，手动启动，执行完就停止，下次timer再调用newTimeout时，再手动启动线程。
+     *
+     * worker线程是一个单独的线程，不在线程池里，手动启动，循环的遍历圆盘中的任务并执行，只要Timer对象的workerState=1, 那这个循环就一直执行 。
+     * 也就是说一个Timer对象，只启动了一个worker线程来处理所有交给该Timer对象的任务。
+     * (暂时从代码来看， 圆盘中的任务只执行一次。 因为timout被执行一次后，就会修改timeout的状态，不会被执行第二次。L806)
      *
      * 新建一个timeout对象时, 会关联上timer对象和task对象, 即, 给它的成员变量timer, task, deadline 赋上值
      * @param task 一个要执行的任务

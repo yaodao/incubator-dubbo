@@ -35,6 +35,7 @@ public final class FailedNotifiedTask extends AbstractRetryTask {
 
     private final NotifyListener listener;
 
+    // 通知失败的url集合 （也可以理解为需要重新通知的url集合）
     private final List<URL> urls = new CopyOnWriteArrayList<>();
 
     public FailedNotifiedTask(URL url, NotifyListener listener) {
@@ -45,6 +46,7 @@ public final class FailedNotifiedTask extends AbstractRetryTask {
         this.listener = listener;
     }
 
+    // 将参数urls添加到需要重新通知的urls集合中
     public void addUrlToRetry(List<URL> urls) {
         if (CollectionUtils.isEmpty(urls)) {
             return;
