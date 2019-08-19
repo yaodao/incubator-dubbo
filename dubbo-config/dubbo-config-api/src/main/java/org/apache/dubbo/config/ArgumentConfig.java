@@ -23,6 +23,14 @@ import java.io.Serializable;
 
 /**
  * The method arguments configuration
+ * 对应配置<dubbo:argument index="0" callback="true" />
+ * 每个ArgumentConfig对象只能代表一个参数
+ *
+ *
+ * 例如：
+ * <dubbo:method name="findXxx" timeout="3000" retries="2">
+ *     <dubbo:argument index="0" callback="true" />
+ * </dubbo:method>
  *
  * @export
  */
@@ -32,6 +40,7 @@ public class ArgumentConfig implements Serializable {
 
     /**
      * The argument index: index -1 represents not set
+     * -1是默认值，表示该属性还没有设置值
      */
     private Integer index = -1;
 

@@ -100,6 +100,7 @@ public class ConfigManager {
 
     public void setApplication(ApplicationConfig application) {
         if (application != null) {
+            // 若参数1和参数2不相同，则抛出异常， 相同则继续往下执行（这个检查是什么作用？？）
             checkDuplicate(this.application, application);
             this.application = application;
         }
@@ -336,13 +337,13 @@ public class ConfigManager {
         getConsumers().values().forEach(ConsumerConfig::refresh);
     }
 
-    // 若oldOne为空, 则直接返回.
-    // 若oldOne不为空, 则比较 oldOne和newOne 两个对象成员变量值是否相同, 若相同则直接返回, 若不同则抛出异常;
+    // 若oldOne不为空 且 oldOne和newOne 的成员变量值不相同，则抛出异常，
+    // 其他情况，无动作
     private void checkDuplicate(AbstractConfig oldOne, AbstractConfig newOne) {
         // 若oldOne和newOne对象的属性值不同, 则抛出异常
         if (oldOne != null && !oldOne.equals(newOne)) {
             String configName = oldOne.getClass().getSimpleName();
-            // 若oldOne和newOne对象的属性值不同, 则抛出异常
+            // 抛出异常
             throw new IllegalStateException("Duplicate Config found for " + configName + ", you should use only one unique " + configName + " for one application.");
         }
     }

@@ -31,6 +31,8 @@ import java.util.Set;
  */
 public abstract class AbstractConfigurator implements Configurator {
 
+    // 示例 "override://10.20.153.10/com.foo.BarService?timeout=200"
+    // 感觉这个对象就是用于增强与自己匹配的 url对象的parameters属性值
     private final URL configuratorUrl;
 
     public AbstractConfigurator(URL url) {
@@ -46,21 +48,30 @@ public abstract class AbstractConfigurator implements Configurator {
     }
 
     @Override
+    // 使用成员变量configuratorUrl的parameters属性值来增强url对象的parameters属性值
     public URL configure(URL url) {
         // If override url is not enabled or is invalid, just return.
+        // 若url/configuratorUrl的host为空，直接返回url； 若configuratorUrl的"enabled"属性值为true，直接返回url
         if (!configuratorUrl.getParameter(Constants.ENABLED_KEY, true) || configuratorUrl.getHost() == null || url == null || url.getHost() == null) {
             return url;
         }
         /**
          * This if branch is created since 2.7.0.
          */
+        // 使用configuratorUrl来增强url对象的parameters属性值
+        // 取configuratorUrl对象的"configVersion"属性值
         String apiVersion = configuratorUrl.getParameter(Constants.CONFIG_VERSION_KEY);
         if (StringUtils.isNotEmpty(apiVersion)) {
+            // 取入参url的"side"值
             String currentSide = url.getParameter(Constants.SIDE_KEY);
+            // 取configuratorUrl的"side"值
             String configuratorSide = configuratorUrl.getParameter(Constants.SIDE_KEY);
+            // 若configuratorSide="consumer"  且 configuratorSide与currentSide相等
             if (currentSide.equals(configuratorSide) && Constants.CONSUMER.equals(configuratorSide) && 0 == configuratorUrl.getPort()) {
+                // 使用成员变量configuratorUrl的属性值来增强url的parameters值
                 url = configureIfMatch(NetUtils.getLocalHost(), url);
-            } else if (currentSide.equals(configuratorSide) && Constants.PROVIDER.equals(configuratorSide) && url.getPort() == configuratorUrl.getPort()) {
+            } // 若configuratorSide="provider" 且 configuratorSide与currentSide相等  且入参url和configuratorUrl的port值相等
+            else if (currentSide.equals(configuratorSide) && Constants.PROVIDER.equals(configuratorSide) && url.getPort() == configuratorUrl.getPort()) {
                 url = configureIfMatch(url.getHost(), url);
             }
         }
@@ -92,14 +103,22 @@ public abstract class AbstractConfigurator implements Configurator {
         return url;
     }
 
+    // 使用成员变量configuratorUrl的属性值来增强url
+    // 就是根据成员变量configuratorUrl的属性值来判断是否使用它的parameters属性值，来给参数url的parameters属性增加entry
     private URL configureIfMatch(String host, URL url) {
+        // 若成员变量configuratorUrl的host值为"0.0.0.0"  或者等于入参host，进入if
         if (Constants.ANYHOST_VALUE.equals(configuratorUrl.getHost()) || host.equals(configuratorUrl.getHost())) {
             // TODO, to support wildcards
+            // 取成员变量configuratorUrl的"providerAddresses"属性值
             String providers = configuratorUrl.getParameter(Constants.OVERRIDE_PROVIDERS_KEY);
+            // providers为空 或者 providers包含入参url的host值 或者  providers包含"0.0.0.0" 进入if
             if (StringUtils.isEmpty(providers) || providers.contains(url.getAddress()) || providers.contains(Constants.ANYHOST_VALUE)) {
+                // 取configuratorUrl的"application"属性值，默认值为它的"username"属性值
                 String configApplication = configuratorUrl.getParameter(Constants.APPLICATION_KEY,
                         configuratorUrl.getUsername());
+                // 取url的"application"属性值，默认值为它的"username"属性值
                 String currentApplication = url.getParameter(Constants.APPLICATION_KEY, url.getUsername());
+                // 若configApplication是"*"  或者 configApplication与currentApplication相等，则进if
                 if (configApplication == null || Constants.ANY_VALUE.equals(configApplication)
                         || configApplication.equals(currentApplication)) {
                     Set<String> conditionKeys = new HashSet<String>();
@@ -112,17 +131,22 @@ public abstract class AbstractConfigurator implements Configurator {
                     conditionKeys.add(Constants.APPLICATION_KEY);
                     conditionKeys.add(Constants.SIDE_KEY);
                     conditionKeys.add(Constants.CONFIG_VERSION_KEY);
+                    // 将configuratorUrl的parameters属性值中的某些特定key，加入conditionKeys
                     for (Map.Entry<String, String> entry : configuratorUrl.getParameters().entrySet()) {
                         String key = entry.getKey();
                         String value = entry.getValue();
+                        // 若key以波浪线开头  或者 key="application" 或者key="side"，将key加入conditionKeys
                         if (key.startsWith("~") || Constants.APPLICATION_KEY.equals(key) || Constants.SIDE_KEY.equals(key)) {
+                            // 将key添加到conditionKeys
                             conditionKeys.add(key);
+                            // 若value不是"*"，且不是url的属性值， 则返回url
                             if (value != null && !Constants.ANY_VALUE.equals(value)
                                     && !value.equals(url.getParameter(key.startsWith("~") ? key.substring(1) : key))) {
                                 return url;
                             }
                         }
                     }
+                    // 重新生成一个url并返回
                     return doConfigure(url, configuratorUrl.removeParameters(conditionKeys));
                 }
             }

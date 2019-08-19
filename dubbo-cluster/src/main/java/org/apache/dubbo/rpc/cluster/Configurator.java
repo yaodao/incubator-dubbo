@@ -66,6 +66,9 @@ public interface Configurator extends Comparable<Configurator> {
      * @param urls URL list to convert
      * @return converted configurator list
      */
+
+    // 对入参urls的每个元素构造对应的Configurator元素，并返回Configurator元素的集合
+    // 感觉这里就是使用由配置文件得到的url集合，构造出Configurator元素集合，这些Configurator元素会被用在其他函数中，用于丰富url对象的参数。
     static Optional<List<Configurator>> toConfigurators(List<URL> urls) {
         if (CollectionUtils.isEmpty(urls)) {
             return Optional.empty();
@@ -76,6 +79,7 @@ public interface Configurator extends Comparable<Configurator> {
 
         List<Configurator> configurators = new ArrayList<>(urls.size());
         for (URL url : urls) {
+            // 若url的protocol属性值为"empty"，则清空configurators列表
             if (Constants.EMPTY_PROTOCOL.equals(url.getProtocol())) {
                 configurators.clear();
                 break;
@@ -83,10 +87,12 @@ public interface Configurator extends Comparable<Configurator> {
             Map<String, String> override = new HashMap<>(url.getParameters());
             //The anyhost parameter of override may be added automatically, it can't change the judgement of changing url
             override.remove(Constants.ANYHOST_KEY);
+            // 若url的parameters属性值为空，则清空configurators列表
             if (override.size() == 0) {
                 configurators.clear();
                 continue;
             }
+            // 生成一个Configurator对象添加到configurators中
             configurators.add(configuratorFactory.getConfigurator(url));
         }
         Collections.sort(configurators);

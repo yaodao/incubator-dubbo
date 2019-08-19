@@ -43,13 +43,17 @@ public abstract class AbstractProtocol implements Protocol {
     //TODO SOFEREFENCE
     protected final Set<Invoker<?>> invokers = new ConcurrentHashSet<Invoker<?>>();
 
+    // 由入参url的属性值，返回字符串 "{group}/{path}:{version}:{port}"
     protected static String serviceKey(URL url) {
+        // 获取url的"bind.port"属性值
         int port = url.getParameter(Constants.BIND_PORT_KEY, url.getPort());
+        // 返回字符串 "{group}/{path}:{version}:{port}"
         return serviceKey(port, url.getPath(), url.getParameter(Constants.VERSION_KEY),
                 url.getParameter(Constants.GROUP_KEY));
     }
 
     protected static String serviceKey(int port, String serviceName, String serviceVersion, String serviceGroup) {
+        // 得到字符串 buf="{serviceGroup}/{serviceName}:{serviceVersion}:{port}"
         return ProtocolUtils.serviceKey(port, serviceName, serviceVersion, serviceGroup);
     }
 

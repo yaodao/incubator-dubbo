@@ -205,11 +205,13 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    // 若成员变量monitor为空，则创建MonitorConfig对象赋值给它
     private void createMonitorIfAbsent() {
         if (this.monitor != null) {
             return;
         }
         ConfigManager configManager = ConfigManager.getInstance();
+        // 给当前对象的monitor属性赋值 （使用新生成的MonitorConfig对象）
         setMonitor(
                 configManager
                         .getMonitor()
@@ -290,31 +292,47 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param provider whether it is the provider side
      * @return
      */
+    // 将代表注册中心的配置对象 转成 代表注册中心的URL对象
+    // 也就是RegistryConfig对象 转成 URL对象，并返回URL对象集合（因为可以有多种类型的注册中心，zk，redis等等）
     protected List<URL> loadRegistries(boolean provider) {
         // check && override if necessary
         List<URL> registryList = new ArrayList<URL>();
         if (CollectionUtils.isNotEmpty(registries)) {
+            // 遍历每个注册中心的配置对象
             for (RegistryConfig config : registries) {
+                // 注册中心的地址
                 String address = config.getAddress();
                 if (StringUtils.isEmpty(address)) {
+                    // 若 address 为空，则将其设为 0.0.0.0
                     address = Constants.ANYHOST_VALUE;
                 }
+                // 若注册中心address有值
                 if (!RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(address)) {
                     Map<String, String> map = new HashMap<String, String>();
+                    // 添加 ApplicationConfig 中的字段信息到 map 中
                     appendParameters(map, application);
+                    // 添加 RegistryConfig 字段信息到 map 中
                     appendParameters(map, config);
+                    // 增加entry("path", " org.apache.dubbo.registry.RegistryService")
                     map.put(Constants.PATH_KEY, RegistryService.class.getName());
                     appendRuntimeParameters(map);
                     if (!map.containsKey(Constants.PROTOCOL_KEY)) {
+                        // 增加entry("protocol", "dubbo")
                         map.put(Constants.PROTOCOL_KEY, Constants.DUBBO_PROTOCOL);
                     }
+                    // 解析得到 URL 列表，address 可能包含多个注册中心 ip，
+                    // 因此解析得到的是一个 URL 列表
                     List<URL> urls = UrlUtils.parseURLs(address, map);
 
                     for (URL url : urls) {
                         url = URLBuilder.from(url)
                                 .addParameter(Constants.REGISTRY_KEY, url.getProtocol())
+                                // 将 URL 协议头设置为 "registry"
                                 .setProtocol(Constants.REGISTRY_PROTOCOL)
                                 .build();
+                        // 通过判断条件，决定是否添加 url 到 registryList 中，条件如下：
+                        // (服务提供者 && register = true)
+                        //    || (非服务提供者 && subscribe = true)
                         if ((provider && url.getParameter(Constants.REGISTER_KEY, true))
                                 || (!provider && url.getParameter(Constants.SUBSCRIBE_KEY, true))) {
                             registryList.add(url);
@@ -336,13 +354,16 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     protected URL loadMonitor(URL registryURL) {
         checkMonitor();
         Map<String, String> map = new HashMap<String, String>();
+        // 新增entry("interface", "org.apache.dubbo.monitor.MonitorService")
         map.put(Constants.INTERFACE_KEY, MonitorService.class.getName());
         appendRuntimeParameters(map);
         //set ip
+        // 从系统环境中取"DUBBO_IP_TO_REGISTRY"对应的值
         String hostToRegistry = ConfigUtils.getSystemProperty(Constants.DUBBO_IP_TO_REGISTRY);
         if (StringUtils.isEmpty(hostToRegistry)) {
             hostToRegistry = NetUtils.getLocalHost();
         }
+        // 新增entry（"register.ip"，{hostToRegistry}）
         map.put(Constants.REGISTER_IP_KEY, hostToRegistry);
         appendParameters(map, monitor);
         appendParameters(map, application);
@@ -352,6 +373,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             address = sysaddress;
         }
         if (ConfigUtils.isNotEmpty(address)) {
+            // map中没有key="protocol"
             if (!map.containsKey(Constants.PROTOCOL_KEY)) {
                 if (getExtensionLoader(MonitorFactory.class).hasExtension(Constants.LOGSTAT_PROTOCOL)) {
                     map.put(Constants.PROTOCOL_KEY, Constants.LOGSTAT_PROTOCOL);
@@ -360,7 +382,8 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 }
             }
             return UrlUtils.parseURL(address, map);
-        } else if (Constants.REGISTRY_PROTOCOL.equals(monitor.getProtocol()) && registryURL != null) {
+        } // monitor对象的protocol属性值="registry" 且 registryURL不为空
+        else if (Constants.REGISTRY_PROTOCOL.equals(monitor.getProtocol()) && registryURL != null) {
             return URLBuilder.from(registryURL)
                     .setProtocol(Constants.DUBBO_PROTOCOL)
                     .addParameter(Constants.PROTOCOL_KEY, Constants.REGISTRY_PROTOCOL)
@@ -370,11 +393,16 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         return null;
     }
 
+    // 在map中添加一些项目运行时的参数
     static void appendRuntimeParameters(Map<String, String> map) {
+        // 增加entry("dubbo", "2.0.2")
         map.put(Constants.DUBBO_VERSION_KEY, Version.getProtocolVersion());
+        // key="release"， vlaue是Version.class所在jar包的版本号
         map.put(Constants.RELEASE_KEY, Version.getVersion());
+        // 增加entry("timestamp", 当前时间戳)
         map.put(Constants.TIMESTAMP_KEY, String.valueOf(System.currentTimeMillis()));
         if (ConfigUtils.getPid() > 0) {
+            // 增加entry("pid", 当前进程的PID)
             map.put(Constants.PID_KEY, String.valueOf(ConfigUtils.getPid()));
         }
     }

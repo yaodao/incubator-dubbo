@@ -30,6 +30,7 @@ public class ProtocolUtils {
                 url.getParameter(Constants.GROUP_KEY));
     }
 
+    // 最终返回的字符串 buf="{serviceGroup}/{serviceName}:{serviceVersion}:{port}"
     public static String serviceKey(int port, String serviceName, String serviceVersion, String serviceGroup) {
         StringBuilder buf = new StringBuilder();
         if (StringUtils.isNotEmpty(serviceGroup)) {
@@ -46,6 +47,7 @@ public class ProtocolUtils {
         return buf.toString();
     }
 
+    // 若generic是"true" 或者是 "nativejava" 或者是 "bean" 则返回true， 否则返回false
     public static boolean isGeneric(String generic) {
         return generic != null
                 && !"".equals(generic)

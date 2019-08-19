@@ -80,7 +80,9 @@ public final class ClassGenerator {
         return new ClassGenerator(getClassPool(loader));
     }
 
+
     public static boolean isDynamicClass(Class<?> cl) {
+        // DC是否为参数cl的父类，或者与参数cl的类型相同， 是则返回true
         return ClassGenerator.DC.class.isAssignableFrom(cl);
     }
 

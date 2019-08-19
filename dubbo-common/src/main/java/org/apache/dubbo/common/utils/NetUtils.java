@@ -93,7 +93,9 @@ public class NetUtils {
         return port;
     }
 
+    // 判断入参port是否在有效范围
     public static boolean isInvalidPort(int port) {
+        // port有效范围是 (0, 65535]
         return port <= MIN_PORT || port > MAX_PORT;
     }
 
@@ -196,6 +198,7 @@ public class NetUtils {
         return address;
     }
 
+    // 获取本机的ip地址
     public static String getLocalHost() {
         InetAddress address = getLocalAddress();
         return address == null ? Constants.LOCALHOST_VALUE : address.getHostAddress();
@@ -234,13 +237,14 @@ public class NetUtils {
 
     /**
      * Find first valid IP from local network card
-     *
+     * 返回本地的ip地址
      * @return first valid local IP
      */
     public static InetAddress getLocalAddress() {
         if (LOCAL_ADDRESS != null) {
             return LOCAL_ADDRESS;
         }
+        // 获取本机的ip地址
         InetAddress localAddress = getLocalAddress0();
         LOCAL_ADDRESS = localAddress;
         return localAddress;

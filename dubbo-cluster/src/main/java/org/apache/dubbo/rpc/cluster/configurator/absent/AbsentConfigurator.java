@@ -30,7 +30,9 @@ public class AbsentConfigurator extends AbstractConfigurator {
     }
 
     @Override
+    // 将两个url的parameters属性值合在一起，重新生成一个url返回
     public URL doConfigure(URL currentUrl, URL configUrl) {
+        // 将入参parameters和currentUrl的parameters合一起，并重新生成一个url返回
         return currentUrl.addParametersIfAbsent(configUrl.getParameters());
     }
 

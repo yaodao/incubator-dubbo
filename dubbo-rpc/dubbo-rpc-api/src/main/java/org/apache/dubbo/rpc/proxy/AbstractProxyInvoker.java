@@ -51,6 +51,7 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
         if (type == null) {
             throw new IllegalArgumentException("interface == null");
         }
+        // type是否为proxy的父类
         if (!type.isInstance(proxy)) {
             throw new IllegalArgumentException(proxy.getClass().getName() + " not implement interface " + type);
         }

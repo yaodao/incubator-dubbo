@@ -1,9 +1,11 @@
 package org.apache.dubbo.common.utils;
 
 import java.util.concurrent.*;
-  class TemPolicy implements RejectedExecutionHandler {
 
-    public TemPolicy() { }
+class TemPolicy implements RejectedExecutionHandler {
+
+    public TemPolicy() {
+    }
 
     public void rejectedExecution(Runnable r, ThreadPoolExecutor e) {
         System.out.println("in TemPolicy: " + Thread.currentThread().getName());
@@ -13,7 +15,46 @@ import java.util.concurrent.*;
                 e.toString());
     }
 }
+
 public class Test2 {
+//    public void setPropertyValue(Object o, String n, Object v) {
+//        org.apache.dubbo.common.utils.Stu w;
+//        try {
+//            w = ((org.apache.dubbo.common.utils.Stu) $1);
+//        } catch (Throwable e) {
+//            throw new IllegalArgumentException(e);
+//        }
+//    }
+//
+//    public Object invokeMethod(Object o, String n, Class[] p, Object[] v) throws java.lang.reflect.InvocationTargetException {
+//        org.apache.dubbo.common.utils.Stu w;
+//        try {
+//            w = ((org.apache.dubbo.common.utils.Stu) $1);
+//        } catch (Throwable e) {
+//            throw new IllegalArgumentException(e);
+//        }
+//        try {
+//            if ("getStuName".equals($2) && $3.length == 0) {
+//                return ($w) w.getStuName();
+//            }
+//            if ("setStuName".equals($2) && $3.length == 1) {
+//                w.setStuName((java.lang.String) $4[0]);
+//                return null;
+//            }
+//            if ("getAge".equals($2) && $3.length == 0) {
+//                return ($w) w.getAge();
+//            }
+//            if ("setAge".equals($2) && $3.length == 1) {
+//                w.setAge((java.lang.Integer) $4[0]);
+//                return null;
+//            }
+//        } catch (Throwable e) {
+//            throw new java.lang.reflect.InvocationTargetException(e);
+//        }
+//        throw new org.apache.dubbo.common.bytecode.NoSuchMethodException("Not found method \"" + $2 + "\" in class org.apache.dubbo.common.utils.Stu.");
+//    }
+
+
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         //线程池单个线程，线程池队列元素个数为1
         ThreadPoolExecutor executorService = new ThreadPoolExecutor(1, 1,

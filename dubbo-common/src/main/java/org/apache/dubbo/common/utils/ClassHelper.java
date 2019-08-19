@@ -81,6 +81,7 @@ public class ClassHelper {
         return forName(name, caller.getClassLoader());
     }
 
+    // 获取加载参数clazz的类加载器
     public static ClassLoader getCallerClassLoader(Class<?> caller) {
         return caller.getClassLoader();
     }

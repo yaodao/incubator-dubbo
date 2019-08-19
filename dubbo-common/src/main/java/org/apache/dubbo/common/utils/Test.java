@@ -2,6 +2,8 @@ package org.apache.dubbo.common.utils;
 
 import javassist.bytecode.stackmap.TypeData;
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.Version;
+import org.apache.dubbo.common.bytecode.Wrapper;
 import org.apache.dubbo.common.timer.HashedWheelTimer;
 import sun.reflect.annotation.AnnotationType;
 
@@ -249,19 +251,67 @@ public class Test {
 //        System.out.println("over");
 //    }
 
-    public static void main(String[] args) {
-        ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
-        map.put("aa","aa11");
-        map.put("bb","bb11");
-        System.out.println(map);
+//    public static void main(String[] args) {
+//        ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+//        map.put("aa","aa11");
+//        map.put("bb","bb11");
+//        System.out.println(map);
+//
+////        String res = map.putIfAbsent("cc","cc");
+////        String res = map.computeIfAbsent("cc",k-> {return "cc";});
+//        String res = map.computeIfAbsent("bb",k-> {return "cc";});
+////        map.put("dd",null);
+//        System.out.println(map);
+//        System.out.println(res);
+//
+//        System.out.println("\\aabb".lastIndexOf("\\"));
+//    }
 
-//        String res = map.putIfAbsent("cc","cc");
-//        String res = map.computeIfAbsent("cc",k-> {return "cc";});
-        String res = map.computeIfAbsent("bb",k-> {return "cc";});
-//        map.put("dd",null);
-        System.out.println(map);
-        System.out.println(res);
+//    public static void main(String[] args) {
 
-        System.out.println("\\aabb".lastIndexOf("\\"));
+//            // 正则
+////            final Pattern INTEGER_PATTERN = Pattern.compile("(-?[0-9]+)"); // 是否数字串
+////            final Pattern INTEGER_PATTERN = Pattern.compile("aa(?:[_$a-zA-Z][_$a-zA-Z0-9]*)");
+//            final Pattern INTEGER_PATTERN = Pattern.compile("(?:is|has|can)([A-Z][_a-zA-Z0-9]*)\\(\\)");
+////            String value = "asa-123aa";
+////            String value = "a:hasaa11()Z";// isRich()Z
+//            String value = "isRich()";// isRich()Z
+//            boolean tem = INTEGER_PATTERN.matcher(value).matches();
+//
+//            Matcher matcher2 = INTEGER_PATTERN.matcher(value);
+//            boolean tem2 = matcher2.find();
+//
+//
+//            System.out.println(tem);
+//            System.out.println(tem2);
+//            System.out.println(matcher2.group());
+//            System.out.println(matcher2.group(0));
+//            System.out.println(matcher2.group(1));
+
+
+//            final Pattern INTEGER_PATTERN = Pattern.compile("(?:is|has|can)([A-Z][_a-zA-Z0-9]*)\\(\\)");
+//            String value = "aaaRich()bb";
+//            Matcher matcher2 = INTEGER_PATTERN.matcher(value);
+//            System.out.println(matcher2.find());
+//            if (matcher2.find()){
+//                System.out.println(matcher2.group(1));
+//            }
+//    }
+//    public static void main(String[] args) {
+//
+//        Wrapper.getWrapper(Stu.class);
+//    }
+
+    class SS{
+
     }
+    public static void main(String[] args) {
+        String tem = UUID.randomUUID().toString();
+        System.out.println(tem);
+
+        Test obj= new Test();
+        Test.SS inner = obj.new SS();
+        System.out.println(inner.getClass());
+    }
+
 }

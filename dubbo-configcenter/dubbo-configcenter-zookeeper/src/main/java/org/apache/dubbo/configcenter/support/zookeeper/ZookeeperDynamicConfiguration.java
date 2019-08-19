@@ -91,11 +91,13 @@ public class ZookeeperDynamicConfiguration implements DynamicConfiguration {
     }
 
     @Override
+    // 取group和key 对应的配置值
     public String getConfig(String key, String group, long timeout) throws IllegalStateException {
         /**
          * when group is not null, we are getting startup configs from Config Center, for example:
          * group=dubbo, key=dubbo.properties
          */
+        // 入参group不空时， key="{group}/{key}"
         if (StringUtils.isNotEmpty(group)) {
             key = group + "/" + key;
         }
@@ -105,10 +107,11 @@ public class ZookeeperDynamicConfiguration implements DynamicConfiguration {
          * 2. key = org.apache.dubbo.DemoService.condition-router
          */
         else {
+            // 入参group为空时， key="org.apache.dubbo.DemoService/configurators"
             int i = key.lastIndexOf(".");
             key = key.substring(0, i) + "/" + key.substring(i + 1);
         }
-
+        // 感觉这个是从zk上取key对应的value值
         return (String) getInternalProperty(rootPath + "/" + key);
     }
 }

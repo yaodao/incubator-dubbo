@@ -69,6 +69,7 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
         try {
             for (Registry registry : getRegistries()) {
                 try {
+                    // 对zk来说，就是关闭zkclient
                     registry.destroy();
                 } catch (Throwable e) {
                     LOGGER.error(e.getMessage(), e);
@@ -82,12 +83,15 @@ public abstract class AbstractRegistryFactory implements RegistryFactory {
     }
 
     @Override
+    // 由入参url得到一个字符串key， 从成员变量REGISTRIES中取该key对应的Registry对象
+    // 若Registry对象不存在，则新建一个，并将（key， Registry对象）添加到成员变量REGISTRIES
     public Registry getRegistry(URL url) {
         url = URLBuilder.from(url)
                 .setPath(RegistryService.class.getName()) // path="org.apache.dubbo.registry.RegistryService"
-                .addParameter(Constants.INTERFACE_KEY, RegistryService.class.getName())
+                .addParameter(Constants.INTERFACE_KEY, RegistryService.class.getName())// interface="org.apache.dubbo.registry.RegistryService"
                 .removeParameters(Constants.EXPORT_KEY, Constants.REFER_KEY)
                 .build();
+        // 得到串 protocol://username:password@host:port/group/interfaceName:version
         String key = url.toServiceStringWithoutResolving();
         // Lock the registry access process to ensure a single instance of the registry
         LOCK.lock();

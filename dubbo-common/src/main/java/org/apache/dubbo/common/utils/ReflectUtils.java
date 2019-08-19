@@ -111,10 +111,12 @@ public final class ReflectUtils {
 
     public static final Pattern METHOD_DESC_PATTERN = Pattern.compile(METHOD_DESC_REGEX);
 
+    // 匹配 "get***()()", 其中***是 大写字母开头， 后面跟下划线，字母或数字
     public static final Pattern GETTER_METHOD_DESC_PATTERN = Pattern.compile("get([A-Z][_a-zA-Z0-9]*)\\(\\)(" + DESC_REGEX + ")");
 
     public static final Pattern SETTER_METHOD_DESC_PATTERN = Pattern.compile("set([A-Z][_a-zA-Z0-9]*)\\((" + DESC_REGEX + ")\\)V");
 
+    // 匹配is/has/can***()Z  其中***是 大写字母开头， 后面跟下划线，字母或数字， 其中的(?:pattern) 是非捕获型括号,可参见笔记
     public static final Pattern IS_HAS_CAN_METHOD_DESC_PATTERN = Pattern.compile("(?:is|has|can)([A-Z][_a-zA-Z0-9]*)\\(\\)Z");
 
     private static final ConcurrentMap<String, Class<?>> DESC_CLASS_CACHE = new ConcurrentHashMap<String, Class<?>>();
@@ -424,7 +426,7 @@ public final class ReflectUtils {
     }
 
     /**
-     * 返回方法的描述
+     * 返回方法签名的描述
      * 例如:
      * int do(int arg1) => "do(I)I"
      * void do(String arg1,boolean arg2) => "do(Ljava/lang/String;Z)V"

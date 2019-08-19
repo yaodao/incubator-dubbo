@@ -55,6 +55,7 @@ public final class Version {
 
     static {
         // check if there's duplicated jar
+        // 通过Version.class 来校验是否重复引入jar包
         Version.checkDuplicate(Version.class);
     }
 
@@ -65,6 +66,7 @@ public final class Version {
         return DEFAULT_DUBBO_PROTOCOL_VERSION;
     }
 
+    // 获取Version.class所在jar包的版本号
     public static String getVersion() {
         return VERSION;
     }
@@ -211,22 +213,35 @@ public final class Version {
         return file;
     }
 
+    // 校验参数cls是否被重复引入
     public static void checkDuplicate(Class<?> cls, boolean failOnError) {
+        // 举例 Transporters.class.getName() = "org.apache.dubbo.remoting.Transporters"
+        // 再处理后，得到 "org/apache/dubbo/remoting/Transporters.class"，
+        // 这个字符串是下面checkDuplicate函数的第一个参数
         checkDuplicate(cls.getName().replace('.', '/') + ".class", failOnError);
     }
 
+    // 校验参数cls是否被重复引入
     public static void checkDuplicate(Class<?> cls) {
         checkDuplicate(cls, false);
     }
 
+
+    // 检验path指定的资源是否被重复加载，是则抛出异常
+    // 举例： path = "org/apache/dubbo/remoting/Transporters.class"
     public static void checkDuplicate(String path, boolean failOnError) {
         try {
             // search in caller's classloader
+            // 在Version.class的类加载器中，查询path指定的资源， 返回找到的资源名字集合
             Set<String> files = getResources(path);
             // duplicated jar is found
+            // 如果找到的资源数 >1， 表示
+            // jar包重复引入（很可能是相同jar的不同版本都被引入）
             if (files.size() > 1) {
+                // error="Duplicate class org/apache/dubbo/remoting/Transporters.class in 2 jar {files}"
                 String error = "Duplicate class " + path + " in " + files.size() + " jar " + files;
                 if (failOnError) {
+                    // 若允许failOnError，则抛出异常
                     throw new IllegalStateException(error);
                 } else {
                     logger.error(error);
@@ -240,7 +255,9 @@ public final class Version {
     /**
      * search resources in caller's classloader
      */
+    // 在Version.class的类加载器中，查询path指定的资源， 返回找到的资源集合
     private static Set<String> getResources(String path) throws IOException {
+        // 先获取加载Version.class的类加载器，再获取path指定的资源
         Enumeration<URL> urls = ClassHelper.getCallerClassLoader(Version.class).getResources(path);
         Set<String> files = new HashSet<String>();
         while (urls.hasMoreElements()) {
@@ -248,6 +265,7 @@ public final class Version {
             if (url != null) {
                 String file = url.getFile();
                 if (file != null && file.length() > 0) {
+                    // 找到的资源集合
                     files.add(file);
                 }
             }

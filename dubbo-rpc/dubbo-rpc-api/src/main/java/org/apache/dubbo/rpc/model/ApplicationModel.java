@@ -38,6 +38,7 @@ public class ApplicationModel {
 
     /**
      * full qualified class name -> provided service
+     * key是类的全名， value是服务提供者的信息
      */
     private static final ConcurrentMap<String, ProviderModel> providedServices = new ConcurrentHashMap<>();
     /**
@@ -69,8 +70,10 @@ public class ApplicationModel {
         }
     }
 
+    // 给成员变量providedServices添加entry
     public static void initProviderModel(String serviceName, ProviderModel providerModel) {
         if (providedServices.putIfAbsent(serviceName, providerModel) != null) {
+            // 若providedServices中有该serviceName对应的value，则log
             LOGGER.warn("Already register the same:" + serviceName);
         }
     }

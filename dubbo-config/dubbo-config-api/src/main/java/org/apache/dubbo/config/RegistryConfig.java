@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * RegistryConfig
- *
+ * 暂时认为这是注册中心的配置
  * @export
  */
 public class RegistryConfig extends AbstractConfig {

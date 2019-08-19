@@ -74,6 +74,7 @@ public interface DynamicConfiguration extends Configuration {
     /**
      * Get the configuration mapped to the given key
      *
+     * 取key对应的配置值
      * @param key the key to represent a configuration
      * @return target configuration mapped to the given key
      */
@@ -109,6 +110,7 @@ public interface DynamicConfiguration extends Configuration {
      *
      * @return DynamicConfiguration instance
      */
+    // 获取一个DynamicConfiguration对象
     static DynamicConfiguration getDynamicConfiguration() {
         Optional<Configuration> optional = Environment.getInstance().getDynamicConfiguration();
         return (DynamicConfiguration) optional.orElseGet(() -> getExtensionLoader(DynamicConfigurationFactory.class)

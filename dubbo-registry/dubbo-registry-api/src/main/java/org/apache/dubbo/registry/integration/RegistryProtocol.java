@@ -167,8 +167,12 @@ public class RegistryProtocol implements Protocol {
 
     @Override
     public <T> Exporter<T> export(final Invoker<T> originInvoker) throws RpcException {
+        // 获取注册中心 URL，以 zookeeper 注册中心为例，得到的示例 URL 如下：
+        // zookeeper://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.2&export=dubbo%3A%2F%2F172.17.48.52%3A20880%2Fcom.alibaba.dubbo.demo.DemoService%3Fanyhost%3Dtrue%26application%3Ddemo-provider
         URL registryUrl = getRegistryUrl(originInvoker);
         // url to export locally
+        // 获取订阅 URL，比如：
+        // provider://172.17.48.52:20880/com.alibaba.dubbo.demo.DemoService?category=configurators&check=false&anyhost=true&application=demo-provider&dubbo=2.0.2&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello
         URL providerUrl = getProviderUrl(originInvoker);
 
         // Subscribe the override data
@@ -176,6 +180,7 @@ public class RegistryProtocol implements Protocol {
         //  the same service. Because the subscribed is cached key with the name of the service, it causes the
         //  subscription information to cover.
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(providerUrl);
+        // 创建监听器
         final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl, originInvoker);
         overrideListeners.put(overrideSubscribeUrl, overrideSubscribeListener);
 
@@ -205,6 +210,7 @@ public class RegistryProtocol implements Protocol {
     }
 
     private URL overrideUrlWithConfig(URL providerUrl, OverrideListener listener) {
+        // 使用成员变量configurators 来填充/覆盖 providerUrl中的参数值
         providerUrl = providerConfigurationListener.overrideUrl(providerUrl);
         ServiceConfigurationListener serviceConfigurationListener = new ServiceConfigurationListener(providerUrl, listener);
         serviceConfigurationListeners.put(providerUrl.getServiceKey(), serviceConfigurationListener);
@@ -215,8 +221,11 @@ public class RegistryProtocol implements Protocol {
     private <T> ExporterChangeableWrapper<T> doLocalExport(final Invoker<T> originInvoker, URL providerUrl) {
         String key = getCacheKey(originInvoker);
 
+        // 访问缓存
         return (ExporterChangeableWrapper<T>) bounds.computeIfAbsent(key, s -> {
+            // 创建 Invoker 为委托类对象
             Invoker<?> invokerDelegate = new InvokerDelegate<>(originInvoker, providerUrl);
+            // 调用 protocol 的 export 方法导出服务
             return new ExporterChangeableWrapper<>((Exporter<T>) protocol.export(invokerDelegate), originInvoker);
         });
     }
@@ -264,7 +273,7 @@ public class RegistryProtocol implements Protocol {
 
     /**
      * Get an instance of registry based on the address of invoker
-     *
+     * 获取一个registry对象， 基于invoker对象的url值
      * @param originInvoker
      * @return
      */
@@ -273,8 +282,12 @@ public class RegistryProtocol implements Protocol {
         return registryFactory.getRegistry(registryUrl);
     }
 
+    // 获取注册中心 URL，以 zookeeper 注册中心为例，得到的示例 URL 如下：
+    // zookeeper://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.2&export=dubbo%3A%2F%2F172.17.48.52%3A20880%2Fcom.alibaba.dubbo.demo.DemoService%3Fanyhost%3Dtrue%26application%3Ddemo-provider
     private URL getRegistryUrl(Invoker<?> originInvoker) {
+        // 从入参originInvoker中取url
         URL registryUrl = originInvoker.getUrl();
+        // 基于这个url的属性值，重新生成一个url，并返回
         if (REGISTRY_PROTOCOL.equals(registryUrl.getProtocol())) {
             String protocol = registryUrl.getParameter(REGISTRY_KEY, DEFAULT_DIRECTORY);
             registryUrl = registryUrl.setProtocol(protocol).removeParameter(REGISTRY_KEY);
@@ -313,33 +326,40 @@ public class RegistryProtocol implements Protocol {
 
     }
 
+    // 基于入参url的属性值新构造一个url返回
     private URL getSubscribedOverrideUrl(URL registeredProviderUrl) {
+        // 入参url设置protocol属性值为"provider"，并新增参数"category"="configurators"， "check"=false
         return registeredProviderUrl.setProtocol(PROVIDER_PROTOCOL)
                 .addParameters(CATEGORY_KEY, CONFIGURATORS_CATEGORY, CHECK_KEY, String.valueOf(false));
     }
 
     /**
      * Get the address of the providerUrl through the url of the invoker
-     *
+     * 通过invoker对象中url的export属性值，得到providerUrl对象
      * @param originInvoker
      * @return
      */
     private URL getProviderUrl(final Invoker<?> originInvoker) {
+        // 取入参originInvoker对象中url的"export"属性值
         String export = originInvoker.getUrl().getParameterAndDecoded(EXPORT_KEY);
         if (export == null || export.length() == 0) {
             throw new IllegalArgumentException("The registry export url is null! registry: " + originInvoker.getUrl());
         }
+        // 将url中"export"属性值转成url对象，返回
         return URL.valueOf(export);
     }
 
     /**
      * Get the key cached in bounds by invoker
+     * 由入参originInvoker，得到一个providerUrl串返回
      *
      * @param originInvoker
      * @return
      */
     private String getCacheKey(final Invoker<?> originInvoker) {
+        // 通过originInvoker对象中url的export属性值，得到providerUrl对象
         URL providerUrl = getProviderUrl(originInvoker);
+        // 从providerUrl中移除参数"dynamic"， 并将providerUrl转成串
         String key = providerUrl.removeParameters("dynamic", "enabled").toFullString();
         return key;
     }
@@ -423,9 +443,11 @@ public class RegistryProtocol implements Protocol {
     }
 
     //Merge the urls of configurators
+    // 使用入参configurators填充url的parameters属性值，返回填充后的url
     private static URL getConfigedInvokerUrl(List<Configurator> configurators, URL url) {
         if (configurators != null && configurators.size() > 0) {
             for (Configurator configurator : configurators) {
+                // 使用configurator对象来增强url对象的parameters属性值
                 url = configurator.configure(url);
             }
         }
@@ -567,6 +589,7 @@ public class RegistryProtocol implements Protocol {
         public ServiceConfigurationListener(URL providerUrl, OverrideListener notifyListener) {
             this.providerUrl = providerUrl;
             this.notifyListener = notifyListener;
+            // 参数为 "{group}*{interfaceName}:{version}.configurators"
             this.initWith(providerUrl.getEncodedServiceKey() + CONFIGURATORS_SUFFIX);
         }
 
@@ -588,7 +611,7 @@ public class RegistryProtocol implements Protocol {
 
         /**
          * Get existing configuration rule and override provider url before exporting.
-         *
+         * 使用成员变量configurators 来填充/覆盖 providerUrl中的参数值， 并返回填充/覆盖属性值后的url
          * @param providerUrl
          * @param <T>
          * @return

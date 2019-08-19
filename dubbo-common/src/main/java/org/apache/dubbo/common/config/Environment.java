@@ -140,7 +140,7 @@ public class Environment {
         return getConfiguration(null, null);
     }
 
-    // 返回 prefix+id+"." 或者 prefix和id都为空, 则返回"dubbo"
+    // 返回 prefix+id+"." 或者， 当prefix和id都为空时, 返回"dubbo"
     private static String toKey(String prefix, String id) {
         StringBuilder sb = new StringBuilder();
         if (StringUtils.isNotEmpty(prefix)) {
@@ -168,6 +168,7 @@ public class Environment {
         this.configCenterFirst = configCenterFirst;
     }
 
+    // 返回成员变量dynamicConfiguration
     public Optional<Configuration> getDynamicConfiguration() {
         return Optional.ofNullable(dynamicConfiguration);
     }

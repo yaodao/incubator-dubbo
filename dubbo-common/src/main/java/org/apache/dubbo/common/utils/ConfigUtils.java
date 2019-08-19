@@ -199,13 +199,15 @@ public class ConfigUtils {
 
     /**
      * System environment -> System properties
-     *
+     * 先从系统环境中取配置，再从java环境中取配置
      * @param key key
      * @return value
      */
     public static String getSystemProperty(String key) {
+        // 从操作系统的环境中取配置
         String value = System.getenv(key);
         if (StringUtils.isEmpty(value)) {
+            // 从java系统的环境中取配置
             value = System.getProperty(key);
         }
         return value;

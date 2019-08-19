@@ -131,6 +131,7 @@ public class CollectionUtils {
         return list;
     }
 
+    // 将list中的元素连接成串，用separator分隔
     public static String join(List<String> list, String separator) {
         StringBuilder sb = new StringBuilder();
         for (String ele : list) {

@@ -27,6 +27,13 @@ import java.util.List;
 
 /**
  * The method configuration
+ * MethodConfig 中存储了 <dubbo:method> 标签的配置信息，
+ *
+ * 例如
+ * <dubbo:reference interface="com.xxx.XxxService">
+ *     <dubbo:method name="findXxx" timeout="3000" retries="2" />
+ * </dubbo:reference>
+ *
  *
  * @export
  */
@@ -37,6 +44,8 @@ public class MethodConfig extends AbstractMethodConfig {
 
     /**
      * The method name
+     * 这个name就是如下配置中的name
+     * <dubbo:method name="findXxx" timeout="3000" retries="2" />
      */
     private String name;
 

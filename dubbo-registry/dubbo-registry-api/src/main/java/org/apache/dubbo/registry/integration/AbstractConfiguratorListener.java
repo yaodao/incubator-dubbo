@@ -38,27 +38,33 @@ public abstract class AbstractConfiguratorListener implements ConfigurationListe
     protected List<Configurator> configurators = Collections.emptyList();
 
 
+    // 入参为 "{group}*{interfaceName}:{version}.configurators"
     protected final void initWith(String key) {
+        // 获取一个DynamicConfiguration对象
         DynamicConfiguration dynamicConfiguration = DynamicConfiguration.getDynamicConfiguration();
         dynamicConfiguration.addListener(key, this);
+        // 取key对应的配置值
         String rawConfig = dynamicConfiguration.getConfig(key);
         if (!StringUtils.isEmpty(rawConfig)) {
+            // 处理ConfigChangeEvent对象的value属性值
             process(new ConfigChangeEvent(key, rawConfig));
         }
     }
 
     @Override
+    // 将入参event的value属性值转成Configurator对象的集合
     public void process(ConfigChangeEvent event) {
         if (logger.isInfoEnabled()) {
             logger.info("Notification of overriding rule, change type is: " + event.getChangeType() +
                     ", raw config content is:\n " + event.getValue());
         }
-
+        // 事件类型是DELETED，则清空成员变量configurators
         if (event.getChangeType().equals(ConfigChangeType.DELETED)) {
             configurators.clear();
         } else {
             try {
                 // parseConfigurators will recognize app/service config automatically.
+                // 对入参urls的每个元素构造对应的Configurator元素，并返回Configurator元素的集合
                 configurators = Configurator.toConfigurators(ConfigParser.parseConfigurators(event.getValue()))
                         .orElse(configurators);
             } catch (Exception e) {

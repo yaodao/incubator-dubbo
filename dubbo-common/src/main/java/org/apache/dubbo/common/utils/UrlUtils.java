@@ -155,6 +155,7 @@ public class UrlUtils {
         return u;
     }
 
+    // 由参数address和defaults，构造出url对象
     public static List<URL> parseURLs(String address, Map<String, String> defaults) {
         // address形如 "192.168.0.1|192.168.0.2|192.168.0.3";
         if (address == null || address.length() == 0) {

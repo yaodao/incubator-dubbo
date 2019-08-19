@@ -505,10 +505,12 @@ class URL implements Serializable {
         return parameters;
     }
 
+    // 从成员变量parameters中取key对应的value值，并使用utf-8编码decode这个value，并返回
     public String getParameterAndDecoded(String key) {
         return getParameterAndDecoded(key, null);
     }
 
+    // 从成员变量parameters中取key对应的value值，并使用utf-8编码decode这个value，并返回
     public String getParameterAndDecoded(String key, String defaultValue) {
         return decode(getParameter(key, defaultValue));
     }
@@ -755,7 +757,10 @@ class URL implements Serializable {
         return Boolean.parseBoolean(value);
     }
 
+    // 成员变量parameters中是否有key
+    // true 有
     public boolean hasParameter(String key) {
+        // 从成员变量parameters中, 取key对应的value值
         String value = getParameter(key);
         return value != null && value.length() > 0;
     }
@@ -988,6 +993,7 @@ class URL implements Serializable {
         return Constants.ANYHOST_VALUE.equals(host) || getParameter(Constants.ANYHOST_KEY, false);
     }
 
+    // 将(key，value)添加到成员变量parameters中， 并使用utf-8编码encode参数value
     public URL addParameterAndEncoded(String key, String value) {
         if (StringUtils.isEmpty(value)) {
             return this;
@@ -1066,6 +1072,8 @@ class URL implements Serializable {
         return new URL(protocol, username, password, host, port, path, map);
     }
 
+    // 成员变量parameters中若有key，则返回当前url对象
+    // 若没有key， 则添加entry(key,value) 到parameters，再重新生成url对象返回
     public URL addParameterIfAbsent(String key, String value) {
         if (StringUtils.isEmpty(key)
                 || StringUtils.isEmpty(value)) {
@@ -1118,6 +1126,8 @@ class URL implements Serializable {
         return new URL(protocol, username, password, host, port, path, map);
     }
 
+    // 将入参parameters和当前对象的parameters合一起，并重新生成一个url返回
+    // 若存在key相同的情况，当前对象的parameters会覆盖入参parameters中的值
     public URL addParametersIfAbsent(Map<String, String> parameters) {
         if (CollectionUtils.isEmptyMap(parameters)) {
             return this;
@@ -1159,6 +1169,7 @@ class URL implements Serializable {
         return removeParameters(key);
     }
 
+    // 从parameters中移除参数keys对应的entry，并重新生成一个url返回
     public URL removeParameters(Collection<String> keys) {
         if (CollectionUtils.isEmpty(keys)) {
             return this;
@@ -1166,17 +1177,20 @@ class URL implements Serializable {
         return removeParameters(keys.toArray(new String[0]));
     }
 
+    // 从parameters中移除参数keys对应的entry，并重新生成一个url返回
     public URL removeParameters(String... keys) {
         if (keys == null || keys.length == 0) {
             return this;
         }
         Map<String, String> map = new HashMap<>(getParameters());
         for (String key : keys) {
+            // 将参数keys中的元素，从map中移除
             map.remove(key);
         }
         if (map.size() == getParameters().size()) {
             return this;
         }
+        // 将剩下的map作为parameters，重新生成一个URL对象
         return new URL(protocol, username, password, host, port, path, map);
     }
 
@@ -1388,11 +1402,13 @@ class URL implements Serializable {
 
     /**
      * The format is '{group}*{interfaceName}:{version}'
-     *
+     * 返回字符串 "{group}*{interfaceName}:{version}"
      * @return
      */
     public String getEncodedServiceKey() {
+        // 得到 "{group}/{interfaceName}:{version}"
         String serviceKey = this.getServiceKey();
+        // 更新为 "{group}*{interfaceName}:{version}"
         serviceKey = serviceKey.replaceFirst("/", "*");
         return serviceKey;
     }

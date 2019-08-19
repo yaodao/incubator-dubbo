@@ -248,6 +248,7 @@ public final class URLBuilder {
         return this;
     }
 
+    // 给成员变量parameters新增entry（key，value）
     public URLBuilder addParameterIfAbsent(String key, String value) {
         if (StringUtils.isEmpty(key) || StringUtils.isEmpty(value)) {
             return this;

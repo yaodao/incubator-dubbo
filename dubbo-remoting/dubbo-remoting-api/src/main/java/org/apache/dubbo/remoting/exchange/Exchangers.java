@@ -66,7 +66,10 @@ public class Exchangers {
         if (handler == null) {
             throw new IllegalArgumentException("handler == null");
         }
+        // url对象新增参数（"codec"，"exchange"）
         url = url.addParameterIfAbsent(Constants.CODEC_KEY, "exchange");
+        // 获取 Exchanger，默认为 HeaderExchanger。
+        // 紧接着调用 HeaderExchanger 的 bind 方法创建 ExchangeServer 实例
         return getExchanger(url).bind(url, handler);
     }
 
@@ -109,11 +112,14 @@ public class Exchangers {
         return getExchanger(url).connect(url, handler);
     }
 
+    // 根据url的"exchanger"属性值，返回Exchanger接口的一个实现类对象
     public static Exchanger getExchanger(URL url) {
+        // 取url的"exchanger"属性值，默认值为"header"
         String type = url.getParameter(Constants.EXCHANGER_KEY, Constants.DEFAULT_EXCHANGER);
         return getExchanger(type);
     }
 
+    // 取别名为type的 Exchanger的实现类的对象
     public static Exchanger getExchanger(String type) {
         return ExtensionLoader.getExtensionLoader(Exchanger.class).getExtension(type);
     }
