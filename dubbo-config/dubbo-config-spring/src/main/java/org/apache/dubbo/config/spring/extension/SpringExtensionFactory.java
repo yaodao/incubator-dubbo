@@ -67,9 +67,12 @@ public class SpringExtensionFactory implements ExtensionFactory {
 
     @Override
     @SuppressWarnings("unchecked")
+    // 可以根据name 或者 type 取实例
+    // type是属性的类型，name是属性名
     public <T> T getExtension(Class<T> type, String name) {
 
         //SPI should be get from SpiExtensionFactory
+        // @SPI标注的接口，不再这里处理
         if (type.isInterface() && type.isAnnotationPresent(SPI.class)) {
             return null;
         }

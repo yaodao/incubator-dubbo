@@ -18,6 +18,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.LockSupport;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -302,16 +306,136 @@ public class Test {
 //        Wrapper.getWrapper(Stu.class);
 //    }
 
-    class SS{
+//    class SS{
+//
+//    }
+//    public static void main(String[] args) {
+//        String tem = UUID.randomUUID().toString();
+//        System.out.println(tem);
+//
+//        Test obj= new Test();
+//        Test.SS inner = obj.new SS();
+//        System.out.println(inner.getClass());
+//    }
 
-    }
+//    private static String message = "hello";
+//    private static AtomicReference<String> atomicReference;
+//
+//    public static void main(final String[] arguments) throws InterruptedException {
+////        public static AtomicInteger count = new AtomicInteger(0);
+//
+//
+//        atomicReference = new AtomicReference<String>(message);
+//        new Thread("Thread 1") {
+//            public void run() {
+//                atomicReference.compareAndSet(message, "Thread 1");
+//                message = message.concat("-Thread 1!");
+//            };
+//        }.start();
+//
+//        Thread.sleep(1000);
+//        System.out.println("Message is: " + message);
+//        System.out.println("Atomic Reference of Message is: " + atomicReference.get());
+//    }
+
+//    public static void main(String[] args) {
+//        Thread thread = new Thread(() -> {
+//            System.out.println(Thread.currentThread().getName() + "等待");
+//            LockSupport.park();
+//            System.out.println(Thread.currentThread().getName() + "被唤醒");
+//            try {
+//                Thread.sleep(5000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//            System.out.println(Thread.currentThread().getName() + "等待2");
+//            LockSupport.park();
+//            System.out.println(Thread.currentThread().getName() + "被唤醒");
+//        });
+//        thread.start();
+//        try {
+//            Thread.sleep(3000);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        LockSupport.unpark(thread);
+//        try {
+//            Thread.sleep(10);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+//        LockSupport.unpark(thread);
+//        System.out.println("end main");
+//    }
+
+//    public static void main(String[] args) {
+//        Thread thread = Thread.currentThread();
+//        LockSupport.unpark(thread);
+//        LockSupport.unpark(thread); //可以多次释放一个许可证，多次执行也只会释放一个许可证。
+//        LockSupport.park(); //但是一次只能获取一个许可证（不可重入）
+//        System.out.println("park1 get permit");
+//        LockSupport.park(); //线程在这里等待
+//        System.out.println("--");
+//    }
+
+//    public static void main(String[] args) throws InterruptedException {
+//        Thread t = new Thread(new Runnable() {
+//            public void run() {
+//                System.out.println("thread...");
+//                LockSupport.park(this);
+//                System.out.println("thread done.");
+//            }
+//        });
+//
+//        t.start();
+//        Thread.sleep(2000);
+//
+//        t.interrupt(); //如果因为park而被阻塞，可以响应中断请求，并且不会抛出InterruptedException。
+//        System.out.println("main thread done.");
+//    }
+
+//    public static void main(String[] args) throws InterruptedException {
+//        Thread t = new Thread(new Runnable() {
+//            public void run() {
+//                synchronized (Test2.class){
+//                    try {
+//                        wait();
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+//                    System.out.println("heheh");
+//                }
+//            }
+//        });
+//
+//        t.start();
+//        Thread.sleep(2000);
+//
+//        t.interrupt();
+//        System.out.println("main thread done.");
+//    }
+
+//    public String name;
+//    public class Task{
+//
+//        public void run() {
+//            name = "aaa";
+//        }
+//    }
+//
+//    public static void main(String[] args) {
+//        Test obj = new Test();
+//        Task task = obj.new Task();
+//        task.run();
+//        System.out.println(obj.name);
+//    }
+
+    // 11111
+    // 100011
     public static void main(String[] args) {
-        String tem = UUID.randomUUID().toString();
-        System.out.println(tem);
-
-        Test obj= new Test();
-        Test.SS inner = obj.new SS();
-        System.out.println(inner.getClass());
+        long tick = 35L;
+        int mask=31;
+        int idx = (int) (tick & mask);
+        System.out.println(idx);
     }
-
 }

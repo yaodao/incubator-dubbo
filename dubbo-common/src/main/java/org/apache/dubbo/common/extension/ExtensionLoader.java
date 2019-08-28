@@ -68,12 +68,13 @@ public class ExtensionLoader<T> {
 
     private static final String DUBBO_DIRECTORY = "META-INF/dubbo/";
 
+    // "META-INF/dubbo/internal/"
     private static final String DUBBO_INTERNAL_DIRECTORY = DUBBO_DIRECTORY + "internal/";
 
     // 匹配 "空格,空格", 其中空格可以没有或者有多个, 逗号必须有
     private static final Pattern NAME_SEPARATOR = Pattern.compile("\\s*[,]+\\s*");
 
-    // key是Class对象, value是ExtensionLoader类的对象
+    // key是成员变量type, value是该type对应的ExtensionLoader对象
     private static final ConcurrentMap<Class<?>, ExtensionLoader<?>> EXTENSION_LOADERS = new ConcurrentHashMap<>();
 
     // key是Class对象, value是该Class对应的实例对象
@@ -81,11 +82,12 @@ public class ExtensionLoader<T> {
 
     // ==============================
 
-    // 暂时认为是带@SPI注解的接口
+    // 带@SPI注解的接口
     private final Class<?> type;
 
     private final ExtensionFactory objectFactory;
 
+    // key是clazz， value是该类的别名
     private final ConcurrentMap<Class<?>, String> cachedNames = new ConcurrentHashMap<>();
 
     // 存放着一个map, key是文件中的类别名, value是类对应的Class对象 (这个map是加载文件中的记录生成的)
@@ -116,11 +118,12 @@ public class ExtensionLoader<T> {
     // 得到ExtensionLoader对象 (type=Compile.class, objectFactory=AdaptiveExtensionFactory的对象), 其他成员变量也被赋值
     private ExtensionLoader(Class<?> type) {
         this.type = type;
-        // type!=ExtensionFactory.class时, 若EXTENSION_LOADERS中没有key=ExtensionFactory.class的entry
-        // 则会先将entry (ExtensionFactory.class, new ExtensionLoader(ExtensionFactory.class)) 添加到EXTENSION_LOADERS中,
-        // 再继续执行
-                                                                // 先得到 new ExtensionLoader(type=ExtensionFactory.class,objectFactory=null)
-                                                                // 再调用getAdaptiveExtension返回AdaptiveExtensionFactory对象 (这个过程会给该对象中的其他成员变量赋值)
+
+                                                                // ExtensionLoader.getExtensionLoader(ExtensionFactory.class)这句
+                                                                // 就是简单的生成一个ExtensionLoader对象， obj(type=ExtensionFactory.class,objectFactory=null)，并将（type，obj）添加到成员变量EXTENSION_LOADERS中
+                                                                // 再调用getAdaptiveExtension() 返回AdaptiveExtensionFactory对象 (这个过程会给loader对象中的其他成员变量赋值)
+                                                                // 这里调用getAdaptiveExtension()，用到了调用者的type属性值，因为调用者是由前半句生成的loader对象，所以type=ExtensionFactory.class
+                                                                // 从代码来看，这句的返回值一直是AdaptiveExtensionFactory对象，因为getExtensionLoader的参数写死了为ExtensionFactory.class
         objectFactory = (type == ExtensionFactory.class ? null : ExtensionLoader.getExtensionLoader(ExtensionFactory.class).getAdaptiveExtension());
     }
 
@@ -130,10 +133,18 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
-    // 返回参数clazz对应的ExtensionLoader对象
+    // 从成员变量EXTENSION_LOADERS中取参数type对应的ExtensionLoader对象，并返回该loader对象
+    // （若没有，则生成一个该type对应的loader对象并添加EXTENSION_LOADERS中）
+
     // 当type=ExtensionFactory.class, 返回ExtensionLoader类型的对象 (type=ExtensionFactory.class, objectFactory=null)
-    // 当type!=ExtensionFactory.class时, 例如: type=Compile.class时
-    // 得到ExtensionLoader对象 (type=Compile.class, objectFactory=AdaptiveExtensionFactory的对象),ExtensionLoader对象的其他成员变量也被赋值
+    // 当type!=ExtensionFactory.class时,
+    // 例如:
+    // type=Compile.class，则返回ExtensionLoader对象 (type=Compile.class, objectFactory=AdaptiveExtensionFactory的对象),期间ExtensionLoader对象的其他成员变量也被赋值
+    // 上面说的 （type， loader对象）会添加到成员变量EXTENSION_LOADERS中
+
+    // 获取或者生成一个ExtensionLoader对象。
+    // 返回值举例：
+    // 当入参type=Compile.class时，返回loader对象 (type=Compile.class, objectFactory=AdaptiveExtensionFactory对象)
     public static <T> ExtensionLoader<T> getExtensionLoader(Class<T> type) {
         if (type == null) {
             throw new IllegalArgumentException("Extension type == null");
@@ -141,6 +152,7 @@ public class ExtensionLoader<T> {
         if (!type.isInterface()) {
             throw new IllegalArgumentException("Extension type (" + type + ") is not an interface!");
         }
+        // 带@SPI注解
         if (!withExtensionAnnotation(type)) {
             throw new IllegalArgumentException("Extension type (" + type +
                     ") is not an extension, because it is NOT annotated with @" + SPI.class.getSimpleName() + "!");
@@ -414,7 +426,7 @@ public class ExtensionLoader<T> {
             synchronized (holder) {
                 instance = holder.get();
                 if (instance == null) {
-                    // 根据name取到对应的clazz 创建一个对象返回
+                    // 根据name，找到对应的clazz， 再创建一个对象返回
                     instance = createExtension(name);
                     holder.set(instance);
                 }
@@ -428,10 +440,10 @@ public class ExtensionLoader<T> {
      */
     // 根据成员变量cachedDefaultName的值取对应的对象实例 (@SPI注解的value值就是cachedDefaultName)
     public T getDefaultExtension() {
-        // 若成员变量cachedClasses没有值, 则设置一个map进去 (key是文件中的类别名, value是类对应的Class对象)
+        // 加载文件中的类，给当前对象的成员变量赋值
         getExtensionClasses();
         if (StringUtils.isBlank(cachedDefaultName) || "true".equals(cachedDefaultName)) {
-            // cachedDefaultName="true"返回null
+            // cachedDefaultName为空  或者  cachedDefaultName="true"，则返回null
             return null;
         }
         // cachedDefaultName的默认值是 @SPI注解的value值
@@ -448,7 +460,7 @@ public class ExtensionLoader<T> {
         return c != null;
     }
 
-    // 返回type接口对应的所有实现类的类名集合
+    // 返回type接口的所有实现类的类别名集合（这句api说明写的很到位，返回的只是type接口的实现类的名字，不包括其它接口的实现类的名字）
     public Set<String> getSupportedExtensions() {
         // 将文件中记录解析map (key是文件中的类别名, value是类对应的Class对象)
         Map<String, Class<?>> clazzes = getExtensionClasses();
@@ -546,10 +558,12 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
-    // 得到type接口所对应的Adapter类的对象, 并设置到cachedAdaptiveInstance中 (type接口下@Adaptive标注的实现类只能有一个)
+    // 返回type接口所对应的 带有@Adaptive注解的类的对象, 并设置到cachedAdaptiveInstance中 ，若type下没有带有@Adaptive注解的类，则会动态生成一个返回
+    // (type接口下@Adaptive标注的实现类只能有一个)
     // 这个函数被调用的时候, 成员变量type已经被赋值了
     public T getAdaptiveExtension() {
         Object instance = cachedAdaptiveInstance.get();
+        // 缓存中没有，才会生成一个
         if (instance == null) {
             if (createAdaptiveInstanceError == null) {
                 synchronized (cachedAdaptiveInstance) {
@@ -599,8 +613,10 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
-    // 先根据name取到对应的clazz, 再用clazz new一个对象 (并给该对象的属性注入值) 返回该对象
-    // 若type有对应的包装类, 则优先返回包装类的对象
+    // 入参name是类的别名，type是类的接口类型
+    // 先根据name取到对应的clazz, 再使用clazz new一个对象 (并给该对象的属性注入值) 返回该对象
+    // 若type有包装类, 则返回包装类的对象
+    // 就是返回name对应的实例对象。
     private T createExtension(String name) {
         // 从成员变量cachedClasses中取name对应的value (cachedClasses存的是从文件中读的内容)
         Class<?> clazz = getExtensionClasses().get(name);
@@ -620,7 +636,7 @@ public class ExtensionLoader<T> {
             // 若type有包装类
             if (CollectionUtils.isNotEmpty(wrapperClasses)) {
                 for (Class<?> wrapperClass : wrapperClasses) {
-                    // 用上面得到的instance做参数 实例化一个包装类 (包装类的构造函数的参数是type类型) 替掉instance原来的值
+                    // 用上面得到的instance做参数 实例化一个包装类 (包装类的构造函数的参数是type类型) 赋值给instance
                     // 若wrapperClasses中有多个元素, 这里就是层层包装 (外层的包装会把里面的包装一起包住) 参见https://blog.csdn.net/sinat_23067771/article/details/79716552
                     instance = injectExtension((T) wrapperClass.getConstructor(type).newInstance(instance));
                 }
@@ -632,19 +648,27 @@ public class ExtensionLoader<T> {
         }
     }
 
+    // 将入参instance的属性 注入值
     private T injectExtension(T instance) {
         try {
-            // type=ExtensionFactory.class时 objectFactory为空, 所以进不去if, 直接返回AdaptiveExtensionFactory的对象
-            // 这个返回的AdaptiveExtensionFactory对象会赋值给成员变量objectFactory
+            // 当前对象的type=ExtensionFactory.class时 objectFactory为空, 所以进不去if, 直接返回AdaptiveExtensionFactory对象
+            // （因为type=ExtensionFactory.class时，这里的入参instance的值就是AdaptiveExtensionFactory对象）
 
-            // type是其他类型时, 可以进入if (因为这个时候objectFactory已经有值了, 值是AdaptiveExtensionFactory对象)
+            // 当前对象的type是其他类型时, 当该injectExtension方法被调用时，这时的objectFactory已经有值了，进入if。
+            /**
+             * 这个objectFactory值是在调用： ExtensionLoader.getExtensionLoader(Protocol.class) 这类的代码时，被赋上值的，
+             * 调用ExtensionLoader.getExtensionLoader(Protocol.class) 会得到一个loader对象，而且，该loader对象的objectFactory属性值是AdaptiveExtensionFactory对象
+             * 完整代码是：Protocol protocol = ExtensionLoader.getExtensionLoader(Protocol.class).getAdaptiveExtension();
+             * 也就是先得到一个loader对象，而且loader对象中的objectFactory属性已经有值了， 再调用getAdaptiveExtension()。
+             */
             if (objectFactory != null) {
                 for (Method method : instance.getClass().getMethods()) {
-                    // 参数instance中有set方法
+                    // 只处理set方法
                     if (isSetter(method)) {
                         /**
                          * Check {@link DisableInject} to see if we need auto injection for this property
                          */
+                        // 跳过不需要注入的属性
                         if (method.getAnnotation(DisableInject.class) != null) {
                             continue;
                         }
@@ -657,7 +681,7 @@ public class ExtensionLoader<T> {
                         try {
                             // method操作的属性名
                             String property = getSetterProperty(method);
-                            // 这里可以从SpiExtensionFactory和SpringExtensionFactory中取出property对应的对象
+                            // 这里可以从SpiExtensionFactory和SpringExtensionFactory中取出property对应的bean
                             // 例如: 可以根据名字(property)从spring的容器中取出bean, 参考 https://www.cnblogs.com/GrimMjx/p/10970643.html
                             Object object = objectFactory.getExtension(pt, property);
                             if (object != null) {
@@ -714,10 +738,8 @@ public class ExtensionLoader<T> {
         return getExtensionClasses().get(name);
     }
 
-    // 加载文件中的类到map (key是文件中的类别名, value是类对应的Class对象), 并将map设置到cachedClasses中
-    // 这个过程中, 会使用文件中的类 给成员变量cachedAdaptiveClass, cachedWrapperClasses, cachedActivates 赋值
-    // cachedAdaptiveClass赋值为带@Adaptive注解的类, cachedWrapperClasses填充进type的包装类, 即,有type类型参数的构造函数的类
-    // cachedActivates 填充进(key是name , value是clazz的@Activate注解对象)
+    // 加载文件中的类到map, 并将map设置到成员变量cachedClasses中 (map中的 key是文件中的类别名, value是类对应的Class对象)
+    // 这个过程中, 会使用文件中的类的信息 给当前对象的成员变量赋值
     private Map<String, Class<?>> getExtensionClasses() {
         Map<String, Class<?>> classes = cachedClasses.get();
         if (classes == null) {
@@ -732,16 +754,31 @@ public class ExtensionLoader<T> {
         return classes;
     }
 
-    // 加载文件中的类, 在调用该函数的地方进行了线程同步
-    // 会设置成员变量cachedAdaptiveClass (带@Adaptive注解的类) 和cachedWrapperClasses (type的包装类, 即 有type类型参数的构造函数)
-    // 若有@Activate标注的类, 成员变量cachedActivates 填充进(key是类名 , value是clazz的@Activate注解对象)
-    // 例如文件内容: "accesslog=com.alibaba.dubbo.rpc.filter.AccessLogFilter"
-    // 返回的 key是accesslog, value是AccessLogFilter.class
+    // 个人感觉，当前类的成员变量值，都是通过解析文件的内容得到。
+    //（当前类的type值改变，就可以读取并解析其他的对应文件的内容，也就是说，当用到这些文件中的内容，才加到内存中）
+
+    // 本函数中，根据当前类的type属性值，来读取并解析对应的文件，最后返回一个map
+    // 例如： 当type=ExtensionFactory.class时， 读取的文件是META-INF\dubbo\internal\org.apache.dubbo.common.extension.ExtensionFactory
+    // 文件内容: "spi=org.apache.dubbo.common.extension.factory.SpiExtensionFactory"
+    // 返回值map中，key是spi, value是SpiExtensionFactory.class
     private Map<String, Class<?>> loadExtensionClasses() {
         // 设置成员变量cachedDefaultName的值
         cacheDefaultExtensionName();
 
+        // 刚开始extensionClasses是空的，最终key是文件中的类别名, value是类对应的Class对象
         Map<String, Class<?>> extensionClasses = new HashMap<>();
+
+        /**
+         * 加载文件中每条记录对应的类 （在调用本函数的地方进行了线程同步），
+         * 依次处理每条记录对应的类， 根据得到的类信息设置成员变量的值 或者 为成员变量添加值。
+         *
+         * 例如：
+         * 若该类带@Adaptive注解，则设置当前对象的成员变量cachedAdaptiveClass=该类的clazz
+         * 若该类有参数为type的构造函数, 则认为该类是type的包装类，则为成员变量cachedWrapperClasses集合添加该类的clazz
+         * 若该类带@Activate注解, 则为当前对象的成员变量cachedActivates 添加值(key是类名 , value是clazz的@Activate注解对象)
+         * 填充extensionClasses, key是记录中类的别名, value是该类的clazz对象
+         */
+
         // 两个函数一对, 只是传入的type路径不一样 (这两个路径,只有一个路径下有文件, 如果都有的话, 文件内容如果有重复, 后面会抛出异常, 正常只有一个路径下有文件)
         // 注意: 这里根据type的类名可以唯一确定一个文件, 也就是这里只是读取一个文件的内容
         loadDirectory(extensionClasses, DUBBO_INTERNAL_DIRECTORY, type.getName());
@@ -757,7 +794,7 @@ public class ExtensionLoader<T> {
      * extract and cache default extension name if exists
      */
     /**
-     * 将成员变量cachedDefaultName的值, 设置为type的注解@SPI的value值
+     * 将成员变量cachedDefaultName的值, 设置为type的注解@SPI的value值， 若value没有值，则不设置
      * (type可以是任意的类, 可以用type=ThreadPool来走一遍看下)
      */
     private void cacheDefaultExtensionName() {
@@ -777,7 +814,10 @@ public class ExtensionLoader<T> {
         }
     }
 
-    // 按参数 dir+type来确定某一个文件, 并读取该文件内容, 注意: 这里根据type的类名可以唯一确定一个文件, 也就是这里只是读取一个文件的内容
+    // 按参数 dir+type来确定某一个文件, 并读取该文件内容
+    // 加载文件中每条记录对应的类 ，并设置当前对象的成员变量的值 或者 为当前对象的成员变量添加值。
+    // 注意: 这里根据type的类名可以唯一确定一个文件, 也就是这里只是读取一个文件的内容
+
     // 使用文件内容填充extensionClasses, 最终key是name, value是类对应的Class对象
     // 例如文件内容: "accesslog=com.alibaba.dubbo.rpc.filter.AccessLogFilter"
     // 则 key是accesslog, value是AccessLogFilter.class
@@ -795,8 +835,7 @@ public class ExtensionLoader<T> {
             if (urls != null) {
                 while (urls.hasMoreElements()) {
                     java.net.URL resourceURL = urls.nextElement();
-                    // 读取resourceURL指定文件的内容 用于填充extensionClasses
-                    // extensionClasses这里是一个空的map
+                    // 读取resourceURL指定文件的内容 用于填充extensionClasses， 并给当前对象的成员变量赋值
                     loadResource(extensionClasses, classLoader, resourceURL);
                 }
             }
@@ -807,14 +846,14 @@ public class ExtensionLoader<T> {
     }
 
 
-    // 读取resourceURL指定文件的内容 用于填充extensionClasses
-    // (参数extensionClasses刚开始是一个空的map)
+    // 读取resourceURL指定文件的内容 用于填充入参extensionClasses， 并给当前对象的成员变量赋值
     private void loadResource(Map<String, Class<?>> extensionClasses, ClassLoader classLoader, java.net.URL resourceURL) {
         try {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(resourceURL.openStream(), StandardCharsets.UTF_8))) {
                 // line内容示例 "accesslog=com.alibaba.dubbo.rpc.filter.AccessLogFilter"
                 // 参考 https://www.cnblogs.com/kindevil-zx/p/5603643.html#spi
                 String line;
+                // 读取文件中的每一行记录，做处理
                 while ((line = reader.readLine()) != null) {
                     // 这段作用是过滤掉#注释所在的行
                     final int ci = line.indexOf('#');
@@ -827,12 +866,14 @@ public class ExtensionLoader<T> {
                             String name = null;
                             int i = line.indexOf('=');
                             if (i > 0) {
+                                // 类别名
                                 name = line.substring(0, i).trim();
-                                // 包名+类名
+                                // 类的全路径（包名和类名）
                                 line = line.substring(i + 1).trim();
                             }
                             if (line.length() > 0) {
-                                // 填充extensionClasses, key是name, value是这里Class.forName加载的类
+                                // 处理由单条文件记录得到的clazz，进一步设置当前对象的成员变量值，并填充extensionClasses
+                                // （extensionClasses中 key是name, value是这里Class.forName加载的类）
                                 loadClass(extensionClasses, resourceURL, Class.forName(line, true, classLoader), name);
                             }
                         } catch (Throwable t) {
@@ -849,13 +890,18 @@ public class ExtensionLoader<T> {
     }
 
     /**
-     * 设置本类的一些成员变量 和 填充extensionClasses,
-     * extensionClasses的内容 key是参数name, value是参数clazz
+     * 从参数clazz获取信息，为本类的一些成员变量设置或者添加值， 也为入参extensionClasses添加值。
+     * （本函数就处理一个clazz， 外层在调用该函数时，会依次传入文件中的每条记录对应的clazz）
      *
-     * 设置的成员变量有: cachedAdaptiveClass, cachedWrapperClasses, cachedActivates, cachedNames
+     * 设置值的成员变量有: cachedAdaptiveClass
+     *
+     * 填充值的成员变量有：
+     * cachedWrapperClasses，cachedActivates，cachedNames
+     *
+     * 填充入参extensionClasses, extensionClasses的内容 key是参数name, value是参数clazz
      *
      * @param extensionClasses 要填充的map
-     * @param resourceURL 读取的文件地址
+     * @param resourceURL 打log用的文件地址
      * @param clazz 根据文件中的单条记录, 加载的clazz
      * @param name 别名
      * @throws NoSuchMethodException
@@ -887,8 +933,10 @@ public class ExtensionLoader<T> {
 
             String[] names = NAME_SEPARATOR.split(name);
             if (ArrayUtils.isNotEmpty(names)) {
-                // 填充成员变量cachedActivates, key是name, value是Activate注解
+                // 若clazz上有@Activate注解，
+                // 则填充成员变量cachedActivates, key是name, value是@Activate注解对象
                 cacheActivateClass(clazz, names[0]);
+                // 若有多个别名，只让一个有效
                 for (String n : names) {
                     // 存入成员变量cachedNames (是个map), key是clazz, value是name
                     cacheName(clazz, n);
@@ -902,6 +950,7 @@ public class ExtensionLoader<T> {
     /**
      * cache name
      */
+    // key是clazz， value是该clazz的别名
     private void cacheName(Class<?> clazz, String name) {
         if (!cachedNames.containsKey(clazz)) {
             cachedNames.put(clazz, name);
@@ -926,7 +975,7 @@ public class ExtensionLoader<T> {
      * for compatibility, also cache class with old alibaba Activate annotation
      */
     /**
-     * 存入map, key是name (文件中的类别名), value是clazz的Activate注解
+     * 存入map, key是name (文件中的类别名), value是clazz的@Activate注解对象， 若没有@Activate注解，则不添加
      * @param clazz 由文件中类的全路径加载得到的clazz对象
      * @param name 文件中的类别名
      */
@@ -984,8 +1033,9 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("deprecation")
-    // 参数clazz上, 若有extention注解 则返回注解对应的value值,
-    // 若没有则返回clazz所属类名的前缀 (这里的参数clazz是具体实现类的Class对象)
+    // 参数clazz上, 若有extention注解 则返回注解的value值,
+    // 若没有则返回clazz类的名字的前缀 (这里的参数clazz是具体实现类的Class对象)
+    // 举例： 入参clazz=SpiExtensionFactory.class， 入参上面没有@Extension注解， 则返回"spi" （type=ExtensionFactory.class）
     private String findAnnotationName(Class<?> clazz) {
         org.apache.dubbo.common.Extension extension = clazz.getAnnotation(org.apache.dubbo.common.Extension.class);
         if (extension == null) {
@@ -1000,7 +1050,7 @@ public class ExtensionLoader<T> {
     }
 
     @SuppressWarnings("unchecked")
-    // 得到type接口所对应的Adapter类的对象
+    // 返回type接口下的Adapter类的对象
     private T createAdaptiveExtension() {
         try {
             // 先获取或者生成type接口对应的一个Adapter类, 再给该Adapter对象所含有的成员变量注入值
@@ -1012,6 +1062,7 @@ public class ExtensionLoader<T> {
 
     // 获取或者生成type的一个Adapter类 (若type接口有 @Adapter标注的实现类, 则返回该实现类; 若没有, 则会动态生成一个实现类并返回)
     private Class<?> getAdaptiveExtensionClass() {
+        //  加载文件中的类，并给当前对象的成员变量赋值
         getExtensionClasses();
         if (cachedAdaptiveClass != null) {
             // 当type=ExtensionFactory.class时,
@@ -1019,6 +1070,13 @@ public class ExtensionLoader<T> {
             return cachedAdaptiveClass;
         }
         // 如果在执行getExtensionClasses() 没有给cachedAdaptiveClass赋值, 这里会使用动态字节码技术生成一个类给它赋值
+        /**
+         * 当type=ExtensionFactory.class时，不会执行到这里，因为type下有@Adaptive注解的类，所以不需要动态生成一个。
+         * 当type!=ExtensionFactory.class时，
+         *      若type下有@Adaptive注解的类，则不会执行到这里。
+         *      若type下没有@Adaptive注解的类，则会执行这里动态生成一个类。
+         * 其中的type就是当前对象的成员变量
+         */
         return cachedAdaptiveClass = createAdaptiveExtensionClass();
     }
 

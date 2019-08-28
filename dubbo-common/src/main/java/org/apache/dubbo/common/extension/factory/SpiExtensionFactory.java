@@ -26,14 +26,15 @@ import org.apache.dubbo.common.extension.SPI;
 public class SpiExtensionFactory implements ExtensionFactory {
 
     @Override
+    // type是属性的类型，name是属性名
+    // 返回type接口的一个实现类的对象 （该实现类必须带@Adaptive注解），这里没用到入参name，所以不能根据name值来取实例
     public <T> T getExtension(Class<T> type, String name) {
-        // 参数type需要是接口 且带有@SPI注解, 不然直接返回null
+        // 只能处理带@SPI注解的接口， 不带直接返回null
         if (type.isInterface() && type.isAnnotationPresent(SPI.class)) {
-            // 得到ExtensionLoader对象,
-            // 例如当type=Compile.class时,
-            // 返回的ExtensionLoader对象是 (type=Compile.class, objectFactory=AdaptiveExtensionFactory类的对象)
+            // 得到ExtensionLoader对象，例如当type=Compile.class时，返回loader对象是 (type=Compile.class, objectFactory=AdaptiveExtensionFactory类的对象)
             ExtensionLoader<T> loader = ExtensionLoader.getExtensionLoader(type);
             if (!loader.getSupportedExtensions().isEmpty()) {
+                // 若入参type有实现类，则返回使用@Adaptive注解标注的那个实现类的对象
                 return loader.getAdaptiveExtension();
             }
         }

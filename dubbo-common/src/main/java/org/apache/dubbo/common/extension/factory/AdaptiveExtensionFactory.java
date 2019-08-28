@@ -30,27 +30,31 @@ import java.util.List;
 @Adaptive
 public class AdaptiveExtensionFactory implements ExtensionFactory {
 
+    // 工厂集合，所有实现了ExtensionFactory接口的类的对象集合
     private final List<ExtensionFactory> factories;
 
+    // 给成员变量factories赋值
     public AdaptiveExtensionFactory() {
-        // 返回ExtensionLoader对象(type=ExtensionFactory.class, objectFactory=null)
+        // 返回ExtensionLoader对象(type=ExtensionFactory.class, objectFactory=null)， loader的成员变量type=ExtensionFactory.class
         ExtensionLoader<ExtensionFactory> loader = ExtensionLoader.getExtensionLoader(ExtensionFactory.class);
         List<ExtensionFactory> list = new ArrayList<ExtensionFactory>();
 
-        // 在这里 loader的成员变量type=ExtensionFactory.class
-        for (String name : loader.getSupportedExtensions()) {// loader.getSupportedExtensions() 会将所有ExtensionFactory接口的实现类的名字取到
-            list.add(loader.getExtension(name));// loader的成员变量type=ExtensionFactory.class
+
+        // loader.getSupportedExtensions() 会将所有ExtensionFactory接口的实现类的名字取到
+        // 在根据名字，取到该名字对应的对象
+        for (String name : loader.getSupportedExtensions()) {
+            list.add(loader.getExtension(name));
         }
         // factories中存放所有ExtensionFactory接口的实现类的对象
         factories = Collections.unmodifiableList(list);
     }
 
     @Override
-    // type是 method中第一个参数的clazz对象, name是 method对应的属性名
+    // type是 method中第一个参数的类型的clazz对象, name是 method对应的属性名
+    // 简单点， type是属性的类型， name是属性名
     public <T> T getExtension(Class<T> type, String name) {
         for (ExtensionFactory factory : factories) {
-            // 依次遍历各个ExtensionFactory实现的getExtension方法，一旦获取到Extension即返回
-            // 如果遍历完所有的ExtensionFactory实现均无法找到Extension,则返回null
+            // 其实就是查看各个工厂对象，看看里面是否有该type类型的实例对象，有就返回。没有返回null
             T extension = factory.getExtension(type, name);
             if (extension != null) {
                 return extension;
