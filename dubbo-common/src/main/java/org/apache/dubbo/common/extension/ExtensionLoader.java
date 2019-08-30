@@ -1081,6 +1081,8 @@ public class ExtensionLoader<T> {
     }
 
     private Class<?> createAdaptiveExtensionClass() {
+        // 生成一个代理类的字符串
+        // cachedDefaultName 源于 SPI 注解值，默认情况下，SPI 注解值为空串，此时 cachedDefaultName = null
         String code = new AdaptiveClassCodeGenerator(type, cachedDefaultName).generate();
         ClassLoader classLoader = findClassLoader();
         // 执行ExtensionLoader.getExtensionLoader(Compiler.class), 就把成员变量type赋值为Compiler.class,

@@ -5,12 +5,14 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.Version;
 import org.apache.dubbo.common.bytecode.Wrapper;
 import org.apache.dubbo.common.timer.HashedWheelTimer;
+import org.apache.logging.log4j.core.net.Protocol;
 import sun.reflect.annotation.AnnotationType;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Parameter;
 import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -430,12 +432,31 @@ public class Test {
 //        System.out.println(obj.name);
 //    }
 
+    class AA {
+        public void show(String str) {
+            System.out.println(str);
+        }
+    }
+
     // 11111
     // 100011
-    public static void main(String[] args) {
+    public static void main(String[] args) throws NoSuchMethodException {
         long tick = 35L;
-        int mask=31;
+        int mask = 31;
         int idx = (int) (tick & mask);
         System.out.println(idx);
+
+        System.out.println(String.class.getSimpleName());
+
+//        Method tem = Protocol.class.getMethod("refer",int.class,URL.class);
+        Method tem = AA.class.getMethod("show", String.class);
+        String str = String.format("method is:%s", tem);
+        System.out.println(str);
+        Parameter[] arr = tem.getParameters();
+        System.out.println(arr[0].getName());
+
+        String methodReturnType = tem.getReturnType().getCanonicalName();
+        System.out.println(methodReturnType);
     }
+
 }
