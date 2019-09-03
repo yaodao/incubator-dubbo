@@ -41,6 +41,7 @@ public class ZookeeperDynamicConfiguration implements DynamicConfiguration {
 
     private Executor executor;
     // The final root path would be: /configRootPath/"config"
+    // rootPath默认值为 "/dubbo/config"
     private String rootPath;
     private final ZookeeperClient zkClient;
     private CountDownLatch initializedLatch;
@@ -52,12 +53,14 @@ public class ZookeeperDynamicConfiguration implements DynamicConfiguration {
     ZookeeperDynamicConfiguration(URL url, ZookeeperTransporter zookeeperTransporter) {
         this.url = url;
         // The final root path would be: /configRootPath/"config"
+        // rootPath默认值为 "/dubbo/config"
         rootPath = "/" + url.getParameter(CONFIG_NAMESPACE_KEY, DEFAULT_GROUP) + "/config";
 
         initializedLatch = new CountDownLatch(1);
         this.cacheListener = new CacheListener(rootPath, initializedLatch);
         this.executor = Executors.newFixedThreadPool(1, new NamedThreadFactory(this.getClass().getSimpleName(), true));
 
+        // 获取一个zk客户端 ZookeeperClient对象
         zkClient = zookeeperTransporter.connect(url);
         zkClient.addDataListener(rootPath, cacheListener, executor);
         try {
@@ -91,7 +94,7 @@ public class ZookeeperDynamicConfiguration implements DynamicConfiguration {
     }
 
     @Override
-    // 取group和key 对应的配置值
+    // 取group+key 对应的配置值
     public String getConfig(String key, String group, long timeout) throws IllegalStateException {
         /**
          * when group is not null, we are getting startup configs from Config Center, for example:

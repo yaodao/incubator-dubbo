@@ -89,6 +89,7 @@ public interface DynamicConfiguration extends Configuration {
      * @param group the group where the key belongs to
      * @return target configuration mapped to the given key and the given group
      */
+    // 从zk上取group+key对应的配置（就是从zk上取key这个节点的内容，group是zk上的路径）
     default String getConfig(String key, String group) {
         return getConfig(key, group, 0L);
     }

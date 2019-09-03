@@ -53,31 +53,45 @@ public class Environment {
     }
 
     // 将 (key=prefix+id+"."  value=SystemConfiguration) 放到propertiesConfigs中, 并返回PropertiesConfiguration对象
+
+
+    // 若propertiesConfigs中存在key，则返回key对应的value值
+    // 若不存在key，则将 key, value=PropertiesConfiguration对象 添加到propertiesConfigs中, 并返回新的value值
+    // 其中，key="{prefix}{id}."
     public PropertiesConfiguration getPropertiesConfig(String prefix, String id) {
-        // 将 key=prefix+id+"."  value=PropertiesConfiguration对象 放到propertiesConfigs中
         return propertiesConfigs.computeIfAbsent(toKey(prefix, id), k -> new PropertiesConfiguration(prefix, id));
     }
 
-    // 将 (key=prefix+id+"."  value=SystemConfiguration) 放到systemConfigs中, 并返回SystemConfiguration对象
+
+    // 若systemConfigs中存在key，则返回key对应的value值
+    // 若不存在key，则将 key, value=SystemConfiguration对象 添加到systemConfigs中, 并返回新的value值
+    // 其中，key="{prefix}{id}."
     public SystemConfiguration getSystemConfig(String prefix, String id) {
         return systemConfigs.computeIfAbsent(toKey(prefix, id), k -> new SystemConfiguration(prefix, id));
     }
 
-    // 将 (key=prefix+id+"."  value=InmemoryConfiguration对象) 放到externalConfigs中, 并返回InmemoryConfiguration对象
+
+    // 若externalConfigs中存在key，则返回key对应的value值
+    // 若不存在key，则将 key, value=InmemoryConfiguration对象 添加到externalConfigs中, 并返回新的value值
+    // 其中，key="{prefix}{id}."
     public InmemoryConfiguration getExternalConfig(String prefix, String id) {
         return externalConfigs.computeIfAbsent(toKey(prefix, id), k -> {
             InmemoryConfiguration configuration = new InmemoryConfiguration(prefix, id);
-            // 设置InmemoryConfiguration对象的成员变量store值
+
+            // InmemoryConfiguration对象的store属性设置为 当前对象的成员变量externalConfigurationMap
             configuration.setProperties(externalConfigurationMap);
             return configuration;
         });
     }
 
-    // 将 (key=prefix+id+"."  value=InmemoryConfiguration对象) 放到appExternalConfigs中, 并返回InmemoryConfiguration对象
+    // 若appExternalConfigs中存在key，则返回key对应的value值
+    // 若不存在key，则将 key, value=InmemoryConfiguration对象 添加到appExternalConfigs中, 并返回新的value值
+    // 其中，key="{prefix}{id}."
     public InmemoryConfiguration getAppExternalConfig(String prefix, String id) {
         return appExternalConfigs.computeIfAbsent(toKey(prefix, id), k -> {
             InmemoryConfiguration configuration = new InmemoryConfiguration(prefix, id);
-            // 设置InmemoryConfiguration对象的成员变量store值
+
+            // InmemoryConfiguration对象的store属性值 设置为 当前对象的成员变量appExternalConfigurationMap
             configuration.setProperties(appExternalConfigurationMap);
             return configuration;
         });
@@ -122,16 +136,19 @@ public class Environment {
      * @param id
      * @return
      */
-    // 新生成一个CompositeConfiguration对象, 将各种Configuration对象添加到它的configList中, 返回该对象
+    // 新生成一个CompositeConfiguration对象, 将各种Configuration对象添加到它的configList中, 各种Configuration对象是按序添加
+    // （注意： 在将各种Configuration对象添加到configList的时候，同时也会将这些对象添加到Environment对象的map成员变量中。）
+    // 本函数最后返回这个CompositeConfiguration对象
     public CompositeConfiguration getConfiguration(String prefix, String id) {
         CompositeConfiguration compositeConfiguration = new CompositeConfiguration();
         // Config center has the highest priority
+        // 添加一个SystemConfiguration对象
         compositeConfiguration.addConfiguration(this.getSystemConfig(prefix, id));
-        // 添加一个InmemoryConfiguration对象, 该InmemoryConfiguration对象的store属性值为本类的成员变量appExternalConfigurationMap
+        // 添加一个InmemoryConfiguration对象
         compositeConfiguration.addConfiguration(this.getAppExternalConfig(prefix, id));
-        // 添加一个InmemoryConfiguration对象, 该InmemoryConfiguration对象的store属性值为本类的成员变量externalConfigurationMap
+        // 添加一个InmemoryConfiguration对象
         compositeConfiguration.addConfiguration(this.getExternalConfig(prefix, id));
-        //添加到configList中
+        //添加一个PropertiesConfiguration对象
         compositeConfiguration.addConfiguration(this.getPropertiesConfig(prefix, id));
         return compositeConfiguration;
     }
@@ -140,7 +157,7 @@ public class Environment {
         return getConfiguration(null, null);
     }
 
-    // 返回 prefix+id+"." 或者， 当prefix和id都为空时, 返回"dubbo"
+    // 返回 "{prefix}{id}." 或者 当prefix和id都为空时, 返回"dubbo"
     private static String toKey(String prefix, String id) {
         StringBuilder sb = new StringBuilder();
         if (StringUtils.isNotEmpty(prefix)) {
@@ -150,6 +167,7 @@ public class Environment {
             sb.append(id);
         }
 
+        // sb末尾若没有"."，则追加"."
         if (sb.length() > 0 && sb.charAt(sb.length() - 1) != '.') {
             sb.append(".");
         }

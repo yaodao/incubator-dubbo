@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentHashMap;
 final public class MockInvoker<T> implements Invoker<T> {
     private final static ProxyFactory proxyFactory = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
     private final static Map<String, Invoker<?>> mocks = new ConcurrentHashMap<String, Invoker<?>>();
+    // key是异常类的名字，value是异常类的对象
     private final static Map<String, Throwable> throwables = new ConcurrentHashMap<String, Throwable>();
 
     private final URL url;
@@ -51,13 +52,16 @@ final public class MockInvoker<T> implements Invoker<T> {
         this.url = url;
     }
 
+    // 解析入参mock
     public static Object parseMockValue(String mock) throws Exception {
         return parseMockValue(mock, null);
     }
 
+    // 将入参mock解析成value， 再将value转成returnTypes类型返回
     public static Object parseMockValue(String mock, Type[] returnTypes) throws Exception {
         Object value = null;
         if ("empty".equals(mock)) {
+            // 若mock="empty"， 则value赋值为returnTypes类型的默认值 或者 null
             value = ReflectUtils.getEmptyObject(returnTypes != null && returnTypes.length > 0 ? (Class<?>) returnTypes[0] : null);
         } else if ("null".equals(mock)) {
             value = null;
@@ -67,8 +71,10 @@ final public class MockInvoker<T> implements Invoker<T> {
             value = false;
         } else if (mock.length() >= 2 && (mock.startsWith("\"") && mock.endsWith("\"")
                 || mock.startsWith("\'") && mock.endsWith("\'"))) {
+            // 取mock的瓤
             value = mock.subSequence(1, mock.length() - 1);
         } else if (returnTypes != null && returnTypes.length > 0 && returnTypes[0] == String.class) {
+            // 若returnTypes是String类型，则value赋值为mock
             value = mock;
         } else if (StringUtils.isNumeric(mock, false)) {
             value = JSON.parse(mock);
@@ -79,7 +85,9 @@ final public class MockInvoker<T> implements Invoker<T> {
         } else {
             value = mock;
         }
+        // 若入参returnTypes数组 不为空，则认为returnTypes[0]是要目标类型， returnTypes[1]是泛型信息。
         if (ArrayUtils.isNotEmpty(returnTypes)) {
+            // 将value转成returnTypes[0]类型的对象
             value = PojoUtils.realize(value, (Class<?>) returnTypes[0], returnTypes.length > 1 ? returnTypes[1] : null);
         }
         return value;
@@ -114,6 +122,7 @@ final public class MockInvoker<T> implements Invoker<T> {
             if (StringUtils.isBlank(mock)) {
                 throw new RpcException("mocked exception for service degradation.");
             } else { // user customized class
+                // 由异常类的名字，得到异常类的对象
                 Throwable t = getThrowable(mock);
                 throw new RpcException(RpcException.BIZ_EXCEPTION, t);
             }
@@ -127,14 +136,22 @@ final public class MockInvoker<T> implements Invoker<T> {
         }
     }
 
+    /**
+     * 由异常类的名字，得到异常类的对象
+     * @param throwstr 异常类的名字
+     * @return 异常类的对象
+     */
     public static Throwable getThrowable(String throwstr) {
+        // 先看缓存里是否有该throwstr对应的异常对象
         Throwable throwable = throwables.get(throwstr);
         if (throwable != null) {
             return throwable;
         }
 
+        // 若缓存没有，则添加进去
         try {
             Throwable t;
+            // 由name得到该name对应的clazz对象
             Class<?> bizException = ReflectUtils.forName(throwstr);
             Constructor<?> constructor;
             constructor = ReflectUtils.findConstructor(bizException, String.class);
@@ -165,12 +182,15 @@ final public class MockInvoker<T> implements Invoker<T> {
     }
 
     @SuppressWarnings("unchecked")
+    // 返回mockService类型的对象，入参mockService是个类名字
     public static Object getMockObject(String mockService, Class serviceType) {
         if (ConfigUtils.isDefault(mockService)) {
+            // mockService值是 "true"或者"default"
             mockService = serviceType.getName() + "Mock";
         }
 
         Class<?> mockClass = ReflectUtils.forName(mockService);
+        // serviceType必须是mockClass的父类或同类，否则抛出异常
         if (!serviceType.isAssignableFrom(mockClass)) {
             throw new IllegalStateException("The mock class " + mockClass.getName() +
                     " not implement interface " + serviceType.getName());
@@ -200,6 +220,7 @@ final public class MockInvoker<T> implements Invoker<T> {
      * @param mock mock string
      * @return normalized mock string
      */
+    // mock串转成另一个串，能转的串如上注释所示
     public static String normalizeMock(String mock) {
         if (mock == null) {
             return mock;

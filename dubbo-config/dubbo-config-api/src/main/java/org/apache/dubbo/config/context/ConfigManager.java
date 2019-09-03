@@ -98,9 +98,12 @@ public class ConfigManager {
         return Optional.ofNullable(application);
     }
 
+    // 给当前对象的成员变量application赋值
     public void setApplication(ApplicationConfig application) {
+        // 入参不空，进if
         if (application != null) {
-            // 若参数1和参数2不相同，则抛出异常， 相同则继续往下执行（这个检查是什么作用？？）
+            // 若当前对象的application属性不为空， 则需要判断参数1和参数2的成员变量值是否相同， 不相同，则抛出异常。
+            // 若当前对象的application属性为空， 则将入参赋值给它。
             checkDuplicate(this.application, application);
             this.application = application;
         }
@@ -134,6 +137,7 @@ public class ConfigManager {
         return Optional.ofNullable(configCenter);
     }
 
+    // 若当前对象的成员变量configCenter为空，则设置为入参
     public void setConfigCenter(ConfigCenterConfig configCenter) {
         if (configCenter != null) {
             checkDuplicate(this.configCenter, configCenter);
@@ -145,26 +149,30 @@ public class ConfigManager {
         return Optional.ofNullable(providers.get(id));
     }
 
+    // 从成员变量providers中取key="default" 对应的ProviderConfig对象
     public Optional<ProviderConfig> getDefaultProvider() {
         return Optional.ofNullable(providers.get(DEFAULT_KEY));
     }
 
-    // 将参数providerConfig加入成员变量providers中 (key是providerConfig的id字段, value是providerConfig对象)
+    // 将参数providerConfig加入成员变量providers中 (key是providerConfig的id字段值, value是providerConfig对象)
     public void addProvider(ProviderConfig providerConfig) {
         if (providerConfig == null) {
             return;
         }
 
-        // key= 若id不为空, 返回id, 否则 若允许默认值 则返回"default" 否则返回null
+        // 若id不为空, 返回id, 否则 若允许默认值 则返回"default" 否则返回null
         String key = StringUtils.isNotEmpty(providerConfig.getId())
                 ? providerConfig.getId()
+                // providerConfig对象的isDefault属性为空 或者 为true，则返回"default"
                 : (providerConfig.isDefault() == null || providerConfig.isDefault()) ? DEFAULT_KEY : null;
 
         if (StringUtils.isEmpty(key)) {
             throw new IllegalStateException("A ProviderConfig should either has an id or it's the default one, " + providerConfig);
         }
 
-        // providers中key对应的value和参数providerConfig不同, 则warn一下 (key相同, 但是两个providerConfig对象的属性值不同)
+        // providers有这个key，
+        // 但key对应的value和参数providerConfig不同, 则warn一下 (key相同, 但是两个providerConfig对象的属性值不同)
+        // 并不覆盖原有value，只是warn下
         if (providers.containsKey(key) && !providerConfig.equals(providers.get(key))) {
             logger.warn("Duplicate ProviderConfig found, there already has one default ProviderConfig or more than two ProviderConfigs have the same id, " +
                                                     "you can try to give each ProviderConfig a different id. " + providerConfig);
@@ -262,7 +270,7 @@ public class ConfigManager {
         return Optional.ofNullable(registries.get(id));
     }
 
-    // 从成员变量registries中 获取默认的RegistryConfig对象集合并返回
+    // 从成员变量registries中 获取默认的RegistryConfig对象，以集合形式返回
     public Optional<List<RegistryConfig>> getDefaultRegistries() {
         List<RegistryConfig> defaults = new ArrayList<>();
         registries.forEach((k, v) -> {
@@ -337,8 +345,8 @@ public class ConfigManager {
         getConsumers().values().forEach(ConsumerConfig::refresh);
     }
 
-    // 若oldOne不为空 且 oldOne和newOne 的成员变量值不相同，则抛出异常，
-    // 其他情况，无动作
+    // 当oldOne不为空时，比较oldOne和newOne 的成员变量值，若不相同，则抛出异常
+    // 其他情况，无动作（也就是oldOne为空时，无动作）
     private void checkDuplicate(AbstractConfig oldOne, AbstractConfig newOne) {
         // 若oldOne和newOne对象的属性值不同, 则抛出异常
         if (oldOne != null && !oldOne.equals(newOne)) {

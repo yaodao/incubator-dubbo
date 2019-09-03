@@ -119,6 +119,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     /**
      * The interface name of the exported service
      */
+    // 要导出服务的接口名
     private String interfaceName;
 
     /**
@@ -157,11 +158,13 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     /**
      * Whether the provider has been exported
      */
+    // 是否已经导出
     private transient volatile boolean exported;
 
     /**
      * The flag whether a service has unexported ,if the method unexported is invoked, the value is true
      */
+    // 是不是已被取消导出
     private transient volatile boolean unexported;
 
     /**
@@ -291,22 +294,31 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             throw new IllegalStateException("<dubbo:service interface=\"\" /> interface not allow null!");
         }
 
+        // 若 ref 是泛化服务类型
         if (ref instanceof GenericService) {
+            // 设置 interfaceClass 为 GenericService.class
             interfaceClass = GenericService.class;
             if (StringUtils.isEmpty(generic)) {
+                // 设置 generic = "true"
                 generic = Boolean.TRUE.toString();
             }
         } else {
+            // ref 非 GenericService 类型
             try {
                 interfaceClass = Class.forName(interfaceName, true, Thread.currentThread()
                         .getContextClassLoader());
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
+            // 对 interfaceClass，以及 <dubbo:method> 标签中的必要字段进行检查
             checkInterfaceAndMethods(interfaceClass, methods);
+            // ref是否为interfaceClass的子类
             checkRef();
+            // 设置 generic = "false"
             generic = Boolean.FALSE.toString();
         }
+
+        // local 和 stub 在功能应该是一致的，用于配置本地存根
         if (local != null) {
             if ("true".equals(local)) {
                 local = interfaceName + "Local";
@@ -317,6 +329,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
+            // interfaceClass若不是localClass的父类，则抛出异常
             if (!interfaceClass.isAssignableFrom(localClass)) {
                 throw new IllegalStateException("The local implementation class " + localClass.getName() + " not implement interface " + interfaceName);
             }
@@ -331,22 +344,37 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             } catch (ClassNotFoundException e) {
                 throw new IllegalStateException(e.getMessage(), e);
             }
+            // interfaceClass若不是stubClass的父类，则抛出异常
             if (!interfaceClass.isAssignableFrom(stubClass)) {
                 throw new IllegalStateException("The stub implementation class " + stubClass.getName() + " not implement interface " + interfaceName);
             }
         }
+        // 检验成员变量local、stub 与 入参interfaceClass之间的关系
         checkStubAndLocal(interfaceClass);
+        // 检验成员变量mock的值是否合法
         checkMock(interfaceClass);
     }
 
     public synchronized void export() {
         checkAndUpdateSubConfigs();
 
+        // 如果当前对象的成员变量export值为false，则不导出服务
         if (!shouldExport()) {
             return;
         }
 
+        // 如果当前对象的成员变量delay > 0，则延时导出服务（延迟注册服务）
         if (shouldDelay()) {
+            /**
+             * 这句代码等价于
+             *       delayExportExecutor.schedule(new Runnable() {
+             *             @Override
+             *             public void run() {
+             *                 doExport();
+             *             }
+             *         }, delay, TimeUnit.MILLISECONDS);
+             *
+             */
             delayExportExecutor.schedule(this::doExport, delay, TimeUnit.MILLISECONDS);
         } else {
             doExport();
@@ -354,12 +382,14 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     private boolean shouldExport() {
+        // 是否导出服务
         Boolean shouldExport = getExport();
         if (shouldExport == null && provider != null) {
             shouldExport = provider.getExport();
         }
 
         // default value is true
+        // 默认为true（导出）
         if (shouldExport == null) {
             return true;
         }
@@ -367,6 +397,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         return shouldExport;
     }
 
+    // 是否延迟
+    // 若成员变量delay>0， 则返回true
+    // 其他情况返回false
     private boolean shouldDelay() {
         Integer delay = getDelay();
         if (delay == null && provider != null) {
@@ -377,9 +410,11 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     protected synchronized void doExport() {
         if (unexported) {
+            // 已被取消导出
             throw new IllegalStateException("The service " + interfaceClass.getName() + " has already unexported!");
         }
         if (exported) {
+            // 已导出
             return;
         }
         exported = true;
@@ -395,6 +430,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         if (ref == null) {
             throw new IllegalStateException("ref not allow null!");
         }
+        // 若interfaceClass不是ref的父类或接口，抛出异常
         if (!interfaceClass.isInstance(ref)) {
             throw new IllegalStateException("The class "
                     + ref.getClass().getName() + " unimplemented interface "
@@ -847,32 +883,33 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     }
 
     private void completeCompoundConfigs() {
-        if (provider != null) {
-            // 下面几个 if 语句用于检测 application、module 等核心配置类对象是否为空，
-            // 若为空，则尝试从其他配置类对象中获取相应的实例。
+        // 下面几个 if 语句用于检测当前对象中 application、module 等属性（核心配置类对象）是否为空，
+        // 若为空，则尝试从其他配置类对象中获取相应的属性值。
+        // 使用其他配置类对象的顺序是 provider>module>application， 当前一个对象中没有对应的属性值，才使用后一个对象的属性值。
 
+        if (provider != null) {
             if (application == null) {
-                // 设置当前对象的application值为ProviderConfig对象的application
+                // 设置当前对象的application属性值
                 setApplication(provider.getApplication());
             }
             if (module == null) {
-                // 设置当前对象的module值为ProviderConfig对象的module
+                // 设置当前对象的module属性值
                 setModule(provider.getModule());
             }
             if (registries == null) {
-                // 将ProviderConfig对象的registries 添加到当前对象的registries中
+                // 设置当前对象的registries属性值
                 setRegistries(provider.getRegistries());
             }
             if (monitor == null) {
-                // 设置当前对象的monitor值为ProviderConfig对象的monitor
+                // 设置当前对象的monitor属性值
                 setMonitor(provider.getMonitor());
             }
             if (protocols == null) {
-                // 设置ConfigManager对象的成员变量protocols 和 当前对象的成员变量protocols
+                // 设置当前对象的protocols属性值
                 setProtocols(provider.getProtocols());
             }
             if (configCenter == null) {
-                // 设置当前对象的configCenter值为ProviderConfig对象的configCenter
+                // 设置当前对象的configCenter属性值
                 setConfigCenter(provider.getConfigCenter());
             }
         }
@@ -896,14 +933,19 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         }
     }
 
+    // 为当前对象的provider属性赋值
     private void checkDefault() {
         createProviderIfAbsent();
     }
 
+    // 为当前对象的provider属性赋值
+    // 从ConfigManager对象中取一个 或者 新建一个
     private void createProviderIfAbsent() {
         if (provider != null) {
             return;
         }
+
+        // 先从ConfigManager对象的providers集合中取默认值，若默认值为空，则new一个ProviderConfig对象
         setProvider (
                 ConfigManager.getInstance()
                         .getDefaultProvider()
@@ -917,19 +959,25 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     private void checkProtocol() {
         if (CollectionUtils.isEmpty(protocols) && provider != null) {
+            // 为ConfigManager对象的成员变量protocols 和 当前对象的成员变量protocols 设置值
             setProtocols(provider.getProtocols());
         }
         convertProtocolIdsToProtocols();
     }
 
+    // 本函数的目的是 给ConfigManager对象和当前对象的成员变量protocols赋值，
+    // 使用成员变量protocolIds中的元素，生成ProtocolConfig对象的集合，将该集合赋值给ConfigManager对象和当前对象的成员变量protocols
     private void convertProtocolIdsToProtocols() {
         if (StringUtils.isEmpty(protocolIds) && CollectionUtils.isEmpty(protocols)) {
             List<String> configedProtocols = new ArrayList<>();
+            // 把externalConfigurationMap中带前缀"dubbo.protocols."的key，去掉前缀， 加入到set中
             configedProtocols.addAll(getSubProperties(Environment.getInstance()
                     .getExternalConfigurationMap(), Constants.PROTOCOLS_SUFFIX));
+            // 把appExternalConfigurationMap中带前缀"dubbo.protocols."的key，去掉前缀， 加入到set中
             configedProtocols.addAll(getSubProperties(Environment.getInstance()
                     .getAppExternalConfigurationMap(), Constants.PROTOCOLS_SUFFIX));
 
+            // set中的元素用逗号连接
             protocolIds = String.join(",", configedProtocols);
         }
 
@@ -962,6 +1010,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 throw new IllegalStateException("Too much protocols found, the protocols comply to this service are :" + protocolIds + " but got " + protocols
                         .size() + " registries!");
             }
+            // 给ConfigManager对象和当前对象的成员变量protocols赋值
             setProtocols(tmpProtocols);
         }
     }
@@ -1045,6 +1094,8 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         return provider;
     }
 
+    // 给ConfigManager对象的providers属性添加entry
+    // 给当前对象的provider属性赋值
     public void setProvider(ProviderConfig provider) {
         ConfigManager.getInstance().addProvider(provider);
         this.provider = provider;

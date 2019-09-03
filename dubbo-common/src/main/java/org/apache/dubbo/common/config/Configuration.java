@@ -26,7 +26,7 @@ public interface Configuration {
      * @param key The configuration key.
      * @return The associated string.
      */
-    // 返回key对应的配置值
+    // 返回key对应的配置值（从项目或环境中取key对应的配置值）
     default String getString(String key) {
         // 取key对应的配置值, 并将该配置值转成String类型返回
         return convert(String.class, key, null);
@@ -100,6 +100,12 @@ public interface Configuration {
 
     /**
      * 取key对应的配置值, 并将该配置值转成cls类型的值返回
+     *
+     * 例如：
+     *  convert(String.class, key, null);
+     *  取key对应的配置值, 并将取到的配置值转成String类型返回
+     *
+     *
      * @param cls 目标类型
      * @param key 配置项的key
      * @param defaultValue 默认的配置值
@@ -111,6 +117,7 @@ public interface Configuration {
         // 从项目或环境中取key对应的配置值 (这一句代码是本方法的重点, 后面的代码都是对这个返回值的处理)
         String value = (String) getProperty(key);
 
+        // 后面的代码都是对这个value返回值的处理
         if (value == null) {
             return defaultValue;
         }

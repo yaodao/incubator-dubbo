@@ -58,6 +58,7 @@ public abstract class AbstractServiceConfig extends AbstractInterfaceConfig {
     /**
      * Whether to export the service
      */
+    // 是否导出服务，true是
     protected Boolean export;
 
     /**
@@ -91,7 +92,12 @@ public abstract class AbstractServiceConfig extends AbstractInterfaceConfig {
      * The protocol list the service will export with
      */
     protected List<ProtocolConfig> protocols;
+
+    // <dubbo:protocol name="dubbo" port="20880" />
+    // <dubbo:protocol/> 用于配置提供服务的协议信息，协议由提供方指定，消费方被动接受
+    // 协议Id，如果Id不填，缺省和name属性值一样，重复则在name后加序号。
     protected String protocolIds;
+
     // provider tag
     protected String tag;
     // max allowed execute times
@@ -205,7 +211,7 @@ public abstract class AbstractServiceConfig extends AbstractInterfaceConfig {
     public void setProtocols(List<? extends ProtocolConfig> protocols) {
         // 将参数protocols中的元素添加到ConfigManager对象的成员变量protocols中
         ConfigManager.getInstance().addProtocols((List<ProtocolConfig>) protocols);
-        // 设置当前对象的成员变量protocols为参数protocols
+        // 设置当前对象的成员变量protocols
         this.protocols = (List<ProtocolConfig>) protocols;
     }
 

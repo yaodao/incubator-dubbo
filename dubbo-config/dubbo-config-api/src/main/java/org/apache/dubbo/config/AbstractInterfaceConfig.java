@@ -130,8 +130,17 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     /**
      * Registry centers
      */
+    // 注册中心对象集合
     protected List<RegistryConfig> registries;
 
+    /**
+     * 举例：
+     * 同一Zookeeper，分成多组注册中心:
+     * <dubbo:registry id="chinaRegistry" protocol="zookeeper" address="10.20.153.10:2181" group="china" />
+     * <dubbo:registry id="intlRegistry" protocol="zookeeper" address="10.20.153.10:2181" group="intl" />
+     *
+     * 这里的registryIds就是多个id的连接串
+     */
     protected String registryIds;
 
     // connection events
@@ -148,6 +157,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     protected MetricsConfig metrics;
     protected MetadataReportConfig metadataReportConfig;
 
+    // 配置中心
     protected ConfigCenterConfig configCenter;
 
     // callback limits
@@ -176,6 +186,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     @SuppressWarnings("deprecation")
     protected void checkApplication() {
         // for backward compatibility
+        // 为当前对象的application属性赋值
         createApplicationIfAbsent();
 
         if (!application.isValid()) {
@@ -238,6 +249,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
     void startConfigCenter() {
         if (configCenter == null) {
+            // 从ConfigManager对象中取configCenter属性值 赋给当前对象的configCenter属性。
             ConfigManager.getInstance().getConfigCenter().ifPresent(cc -> this.configCenter = cc);
         }
 
@@ -249,24 +261,31 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         ConfigManager.getInstance().refreshAll();
     }
 
+    // 给Environment的成员变量赋值
     private void prepareEnvironment() {
+        // configCenter对象的address字段值是否合法
         if (configCenter.isValid()) {
-            // 感觉这里作用就是控制prepareEnvironment() 只被执行一次
+            // cas操作configCenter的inited属性，保证了prepareEnvironment() 只被执行一次
             if (!configCenter.checkOrUpdateInited()) {
                 return;
             }
             DynamicConfiguration dynamicConfiguration = getDynamicConfiguration(configCenter.toUrl());
+            // 从zk上取group+key对应的配置内容
             String configContent = dynamicConfiguration.getConfig(configCenter.getConfigFile(), configCenter.getGroup());
 
+
+            // 从zk上取appGroup+key对应的配置内容
             String appGroup = application != null ? application.getName() : null;
             String appConfigContent = null;
             if (StringUtils.isNotEmpty(appGroup)) {
+                // 取zk
                 appConfigContent = dynamicConfiguration.getConfig
                         (StringUtils.isNotEmpty(configCenter.getAppConfigFile()) ? configCenter.getAppConfigFile() : configCenter.getConfigFile(),
                          appGroup
                         );
             }
             try {
+                // 解析上面取到的zk节点的内容，存入Environment的map对象中
                 Environment.getInstance().setConfigCenterFirst(configCenter.isHighestPriority());
                 Environment.getInstance().updateExternalConfigurationMap(parseProperties(configContent));
                 Environment.getInstance().updateAppExternalConfigurationMap(parseProperties(appConfigContent));
@@ -276,11 +295,15 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    // 获取一个DynamicConfiguration接口的子类对象
     private DynamicConfiguration getDynamicConfiguration(URL url) {
+        // 获取别名是"{protocol}"的一个实现类对象 （DynamicConfigurationFactory接口的实现类对象）
         DynamicConfigurationFactory factories = ExtensionLoader
                 .getExtensionLoader(DynamicConfigurationFactory.class)
                 .getExtension(url.getProtocol());
+        // 获取factories对象的dynamicConfiguration属性
         DynamicConfiguration configuration = factories.getDynamicConfiguration(url);
+        // 设置到Environment中
         Environment.getInstance().setDynamicConfiguration(configuration);
         return configuration;
     }
@@ -432,6 +455,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param interfaceClass the interface of remote service
      * @param methods the methods configured
      */
+    // 判断入参methods中的每一个元素，都是入参interfaceClass中的方法
     protected void checkInterfaceAndMethods(Class<?> interfaceClass, List<MethodConfig> methods) {
         // interface cannot be null
         Assert.notNull(interfaceClass, new IllegalStateException("interface not allow null!"));
@@ -440,7 +464,10 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         if (!interfaceClass.isInterface()) {
             throw new IllegalStateException("The interface class " + interfaceClass + " is not a interface!");
         }
+        // 到这说明interfaceClass是接口 且 不为空
+
         // check if methods exist in the remote service interface
+        // 判断这些方法属于interfaceClass接口
         if (CollectionUtils.isNotEmpty(methods)) {
             for (MethodConfig methodBean : methods) {
                 methodBean.setService(interfaceClass.getName());
@@ -453,6 +480,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                             "<dubbo:method name=\"\" ... /></<dubbo:reference>");
                 }
 
+                // 判断interfaceClass中是否有名字为methodName的方法，没有就抛异常
                 boolean hasMethod = Arrays.stream(interfaceClass.getMethods()).anyMatch(method -> method.getName().equals(methodName));
                 if (!hasMethod) {
                     throw new IllegalStateException("The interface " + interfaceClass.getName()
@@ -469,26 +497,33 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param interfaceClass for provider side, it is the {@link Class} of the service that will be exported; for consumer
      *                       side, it is the {@link Class} of the remote service interface that will be referenced
      */
+    // 检验成员变量mock的值是否合法
     void checkMock(Class<?> interfaceClass) {
         if (ConfigUtils.isEmpty(mock)) {
             return;
         }
 
         String normalizedMock = MockInvoker.normalizeMock(mock);
+        // 若normalizedMock以"return "开头
         if (normalizedMock.startsWith(Constants.RETURN_PREFIX)) {
+            // 截取normalizedMock，剩下"return "之后的串
             normalizedMock = normalizedMock.substring(Constants.RETURN_PREFIX.length()).trim();
             try {
                 //Check whether the mock value is legal, if it is illegal, throw exception
+                // 验证normalizedMock是否合法
                 MockInvoker.parseMockValue(normalizedMock);
             } catch (Exception e) {
                 throw new IllegalStateException("Illegal mock return in <dubbo:service/reference ... " +
                         "mock=\"" + mock + "\" />");
             }
-        } else if (normalizedMock.startsWith(Constants.THROW_PREFIX)) {
+        } // 若normalizedMock以"throw"开头
+        else if (normalizedMock.startsWith(Constants.THROW_PREFIX)) {
+            // 截取得到"throw"后面的串
             normalizedMock = normalizedMock.substring(Constants.THROW_PREFIX.length()).trim();
             if (ConfigUtils.isNotEmpty(normalizedMock)) {
                 try {
                     //Check whether the mock value is legal
+                    // 由异常类的名字，得到异常类的对象
                     MockInvoker.getThrowable(normalizedMock);
                 } catch (Exception e) {
                     throw new IllegalStateException("Illegal mock throw in <dubbo:service/reference ... " +
@@ -497,6 +532,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             }
         } else {
             //Check whether the mock class is a implementation of the interfaceClass, and if it has a default constructor
+            // 校验normalizedMock是interfaceClass的子类或者同类
             MockInvoker.getMockObject(normalizedMock, interfaceClass);
         }
     }
@@ -507,6 +543,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param interfaceClass for provider side, it is the {@link Class} of the service that will be exported; for consumer
      *                       side, it is the {@link Class} of the remote service interface
      */
+    // 检验成员变量local、stub 与 入参interfaceClass之间的关系是否合法，不合法则抛出异常
     void checkStubAndLocal(Class<?> interfaceClass) {
         if (ConfigUtils.isNotEmpty(local)) {
             Class<?> localClass = ConfigUtils.isDefault(local) ?
@@ -520,7 +557,12 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    // 验证
+    // 入参interfaceClass是否为localClass的父类或同类，
+    // 入参localClass对象中，是否有参数类型为interfaceClass的构造函数
+    // 其中任一个不满足，则抛出异常
     private void verify(Class<?> interfaceClass, Class<?> localClass) {
+        // interfaceClass必须是localClass的父类或同类，否则抛异常
         if (!interfaceClass.isAssignableFrom(localClass)) {
             throw new IllegalStateException("The local implementation class " + localClass.getName() +
                     " not implement interface " + interfaceClass.getName());
@@ -528,6 +570,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
         try {
             //Check if the localClass a constructor with parameter who's type is interfaceClass
+            // 查看localClass对象中，是否有参数类型为interfaceClass的构造函数
             ReflectUtils.findConstructor(localClass, interfaceClass);
         } catch (NoSuchMethodException e) {
             throw new IllegalStateException("No such constructor \"public " + localClass.getSimpleName() +
@@ -535,19 +578,29 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    // 本函数的目的是 给ConfigManager对象和当前对象的成员变量registries赋值，
+    // 使用成员变量registryIds中的元素，生成RegistryConfig对象的集合，将该集合赋值给ConfigManager对象和当前对象的成员变量registries
     private void convertRegistryIdsToRegistries() {
+        // 若registryIds和registries都为空，则先从Environment对象中收集RegistryConfig对象的id属性值 到set
         if (StringUtils.isEmpty(registryIds) && CollectionUtils.isEmpty(registries)) {
             Set<String> configedRegistries = new HashSet<>();
+            // 把externalConfigurationMap中带前缀"dubbo.registries."的key，去掉前缀， 加入到set中
             configedRegistries.addAll(getSubProperties(Environment.getInstance().getExternalConfigurationMap(),
                     Constants.REGISTRIES_SUFFIX));
+            // 把appExternalConfigurationMap中带前缀"dubbo.registries."的key，去掉前缀， 加入到set中
             configedRegistries.addAll(getSubProperties(Environment.getInstance().getAppExternalConfigurationMap(),
                     Constants.REGISTRIES_SUFFIX));
 
+            // 将set中的元素使用","连接起来
             registryIds = String.join(Constants.COMMA_SEPARATOR, configedRegistries);
         }
 
+        // 若上面没有收集到RegistryConfig对象的id属性值，即 registryIds为空
         if (StringUtils.isEmpty(registryIds)) {
+            // registries也为空
             if (CollectionUtils.isEmpty(registries)) {
+                // 则先从ConfigManager对象中取默认的RegistryConfig对象， 若没取到则new一个，
+                // 给ConfigManager对象和当前对象的成员变量registries赋值
                 setRegistries(
                         ConfigManager.getInstance().getDefaultRegistries()
                         .filter(CollectionUtils::isNotEmpty)
@@ -559,9 +612,13 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                 );
             }
         } else {
+            // 若上面收集到了RegistryConfig对象的id属性值，
+            // 即 registryIds有值，则使用registryIds中的元素，new一些RegistryConfig对象
             String[] ids = Constants.COMMA_SPLIT_PATTERN.split(registryIds);
             List<RegistryConfig> tmpRegistries = CollectionUtils.isNotEmpty(registries) ? registries : new ArrayList<>();
             Arrays.stream(ids).forEach(id -> {
+                // 若registries中没有该id的RegistryConfig对象 且 ConfigManager中也没有，
+                // 则new一个RegistryConfig对象添加到tmpRegistries中
                 if (tmpRegistries.stream().noneMatch(reg -> reg.getId().equals(id))) {
                     tmpRegistries.add(ConfigManager.getInstance().getRegistry(id).orElseGet(() -> {
                         RegistryConfig registryConfig = new RegistryConfig();
@@ -577,25 +634,33 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                         "are :" + registryIds + ", but got " + tmpRegistries.size() + " registries!");
             }
 
+            // 给ConfigManager对象和当前对象的成员变量registries赋值
             setRegistries(tmpRegistries);
         }
 
     }
 
+    // 这个函数就是用于兼容之前版本功能的函数
+    // 若当前对象的registries属性为空，则说明没有取到注册中心的配置，则使用早期版本的方式取注册中心的配置
+    // 若可以取到，则生成对应的RegistryConfig对象，并赋值给当前对象的registries属性。
     private void loadRegistriesFromBackwardConfig() {
         // for backward compatibility
         // -Ddubbo.registry.address is now deprecated.
         if (registries == null || registries.isEmpty()) {
+            // 从环境变量或者配置文件"dubbo.properties"里， 取注册中心的地址
+            // 例如： dubbo.registry.address=10.20.153.10:9090 相当于 <dubbo:registry address="10.20.153.10:9090" />
             String address = ConfigUtils.getProperty("dubbo.registry.address");
             if (address != null && address.length() > 0) {
                 List<RegistryConfig> tmpRegistries = new ArrayList<RegistryConfig>();
                 String[] as = address.split("\\s*[|]+\\s*");
                 for (String a : as) {
+                    // new一个RegistryConfig对象，并添加到tmpRegistries中
                     RegistryConfig registryConfig = new RegistryConfig();
                     registryConfig.setAddress(a);
                     registryConfig.refresh();
                     tmpRegistries.add(registryConfig);
                 }
+                // 给ConfigManager对象和当前对象的成员变量registries赋值
                 setRegistries(tmpRegistries);
             }
         }
@@ -729,16 +794,22 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         return application;
     }
 
+    // 给ConfigManager对象 和 当前对象的application属性赋值
     public void setApplication(ApplicationConfig application) {
+        // 给ConfigManager对象的application属性赋值。
         ConfigManager.getInstance().setApplication(application);
+        // 给当前对象的application属性赋值
         this.application = application;
     }
 
+    // 为当前对象的application属性赋值
+    // 从ConfigManager对象中取一个 或者 新建一个
     private void createApplicationIfAbsent() {
         if (this.application != null) {
             return;
         }
         ConfigManager configManager = ConfigManager.getInstance();
+        // 先从ConfigManager对象中取值，若取不到，则new一个ApplicationConfig对象
         setApplication(
                 configManager
                         .getApplication()
@@ -776,7 +847,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
     @SuppressWarnings({"unchecked"})
     // 给ConfigManager对象和当前对象的成员变量registries赋值
     public void setRegistries(List<? extends RegistryConfig> registries) {
-        // 给ConfigManager对象的成员变量registries赋值 (将参数registryConfigs 中的元素添加到ConfigManager对象的成员变量registries中)
+        // 将入参registryConfigs 中的元素添加到ConfigManager对象的registries集合中
         ConfigManager.getInstance().addRegistries((List<RegistryConfig>) registries);
         // 设置当前对象的registries值
         this.registries = (List<RegistryConfig>) registries;
@@ -819,6 +890,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         return configCenter;
     }
 
+    // 给ConfigManager对象的configCenter属性 和 当前对象的configCenter属性赋值
     public void setConfigCenter(ConfigCenterConfig configCenter) {
         ConfigManager.getInstance().setConfigCenter(configCenter);
         this.configCenter = configCenter;

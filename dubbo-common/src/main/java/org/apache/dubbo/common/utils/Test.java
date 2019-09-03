@@ -10,6 +10,7 @@ import sun.reflect.annotation.AnnotationType;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -432,31 +433,42 @@ public class Test {
 //        System.out.println(obj.name);
 //    }
 
-    class AA {
-        public void show(String str) {
-            System.out.println(str);
+//    class AA {
+//        public void show(String str) {
+//            System.out.println(str);
+//        }
+//    }
+//
+//    // 11111
+//    // 100011
+//    public static void main(String[] args) throws NoSuchMethodException {
+//        long tick = 35L;
+//        int mask = 31;
+//        int idx = (int) (tick & mask);
+//        System.out.println(idx);
+//
+//        System.out.println(String.class.getSimpleName());
+//
+////        Method tem = Protocol.class.getMethod("refer",int.class,URL.class);
+//        Method tem = AA.class.getMethod("show", String.class);
+//        String str = String.format("method is:%s", tem);
+//        System.out.println(str);
+//        Parameter[] arr = tem.getParameters();
+//        System.out.println(arr[0].getName());
+//
+//        String methodReturnType = tem.getReturnType().getCanonicalName();
+//        System.out.println(methodReturnType);
+//    }
+
+    public static void main(String[] args) {
+//        int  arr[] = new int[3];
+        String  arr[] = new String[3];
+        Object tem = Array.newInstance(arr.getClass().getComponentType(), 2);
+//        System.out.println(((int [])tem).length);
+        System.out.println(((String [])tem).length);
+        if (((String [])tem)[0] == null){
+            System.out.println("hehe");
         }
+        Arrays.stream((String [])tem).forEach(elem-> System.out.println("aa"+elem+"bb"));
     }
-
-    // 11111
-    // 100011
-    public static void main(String[] args) throws NoSuchMethodException {
-        long tick = 35L;
-        int mask = 31;
-        int idx = (int) (tick & mask);
-        System.out.println(idx);
-
-        System.out.println(String.class.getSimpleName());
-
-//        Method tem = Protocol.class.getMethod("refer",int.class,URL.class);
-        Method tem = AA.class.getMethod("show", String.class);
-        String str = String.format("method is:%s", tem);
-        System.out.println(str);
-        Parameter[] arr = tem.getParameters();
-        System.out.println(arr[0].getName());
-
-        String methodReturnType = tem.getReturnType().getCanonicalName();
-        System.out.println(methodReturnType);
-    }
-
 }

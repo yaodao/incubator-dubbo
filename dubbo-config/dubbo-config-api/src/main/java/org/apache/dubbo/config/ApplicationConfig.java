@@ -33,6 +33,14 @@ import java.util.Map;
  *
  * @export
  */
+/**
+ * 暂时认为这个对象对应的配置是
+ * <dubbo:application/> 用于配置当前的应用信息，不管该应用是提供者还是消费者。
+ * 举例：
+ *      <dubbo:application name="xixi_provider" />
+ *      <dubbo:application name="hehe_consumer" />
+ */
+
 public class ApplicationConfig extends AbstractConfig {
 
     private static final long serialVersionUID = 5508512956753757169L;

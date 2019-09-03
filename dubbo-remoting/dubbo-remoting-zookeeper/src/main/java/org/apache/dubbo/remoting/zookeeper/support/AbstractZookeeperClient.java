@@ -141,6 +141,8 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
         }
         TargetDataListener targetListener = dataListenerMap.get(listener);
         if (targetListener == null) {
+            // 若还没有对应的cruator监听器，则新建一个
+            // createTargetDataListener会对DataListener监听器进行转换，转成cruator监听器
             dataListenerMap.putIfAbsent(listener, createTargetDataListener(path, listener));
             targetListener = dataListenerMap.get(listener);
         }

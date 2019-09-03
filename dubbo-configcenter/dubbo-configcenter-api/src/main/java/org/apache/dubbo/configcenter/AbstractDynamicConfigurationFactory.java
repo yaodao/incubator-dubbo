@@ -26,7 +26,7 @@ public abstract class AbstractDynamicConfigurationFactory implements DynamicConf
     private volatile DynamicConfiguration dynamicConfiguration;
 
     @Override
-    // 获取成员变量dynamicConfiguration， 若为空，就新建一个，再返回
+    // 获取当前对象的成员变量dynamicConfiguration， 若为空，就新建一个，再返回
     public DynamicConfiguration getDynamicConfiguration(URL url) {
         if (dynamicConfiguration == null) {
             synchronized (this) {

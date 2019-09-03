@@ -399,10 +399,12 @@ public class RegistryConfig extends AbstractConfig {
     }
 
     @Parameter(excluded = true)
+    // 判断当前对象是否为zk类型的注册中心对象
     public boolean isZookeeperProtocol() {
         if (!isValid()) {
             return false;
         }
+        // 当前对象的成员变量protocol="zookeeper" 或者 address以"zookeeper"开头，返回true
         return Constants.ZOOKEEPER_PROTOCOL.equals(getProtocol())
                 || getAddress().startsWith(Constants.ZOOKEEPER_PROTOCOL);
     }
@@ -418,6 +420,7 @@ public class RegistryConfig extends AbstractConfig {
 
     @Override
     @Parameter(excluded = true)
+    // address不为空，返回true
     public boolean isValid() {
         // empty protocol will default to 'dubbo'
         return !StringUtils.isEmpty(address);

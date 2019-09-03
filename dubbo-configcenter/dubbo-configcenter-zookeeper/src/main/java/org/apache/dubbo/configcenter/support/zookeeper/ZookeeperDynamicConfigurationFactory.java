@@ -35,6 +35,7 @@ public class ZookeeperDynamicConfigurationFactory extends AbstractDynamicConfigu
 
     @Override
     protected DynamicConfiguration createDynamicConfiguration(URL url) {
+        // 新建一个ZookeeperDynamicConfiguration对象，并返回
         return new ZookeeperDynamicConfiguration(url, zookeeperTransporter);
     }
 }

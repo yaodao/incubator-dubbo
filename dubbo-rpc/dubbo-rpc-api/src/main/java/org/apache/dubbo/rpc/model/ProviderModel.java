@@ -26,6 +26,9 @@ import java.util.Map;
 /**
  * ProviderModel which is about published services
  */
+// ProviderModel 表示服务提供者模型，此对象中存储了与服务提供者相关的信息。
+// 比如服务的配置信息，服务实例等。每个被导出的服务对应一个 ProviderModel。
+// ApplicationModel 持有所有的 ProviderModel。
 public class ProviderModel {
     private final String serviceName;
     private final Object serviceInstance;

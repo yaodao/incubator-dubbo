@@ -964,14 +964,17 @@ public final class ReflectUtils {
         return findMethodByMethodSignature(clazz, methodName, null);
     }
 
+    // 获取clazz对象中，参数类型为paramType的构造函数，没有则抛出异常
     public static Constructor<?> findConstructor(Class<?> clazz, Class<?> paramType) throws NoSuchMethodException {
         Constructor<?> targetConstructor;
         try {
+            // 获取指定参数类型的构造函数
             targetConstructor = clazz.getConstructor(new Class<?>[]{paramType});
         } catch (NoSuchMethodException e) {
             targetConstructor = null;
             Constructor<?>[] constructors = clazz.getConstructors();
             for (Constructor<?> constructor : constructors) {
+                // 构造函数是 public 且 只有一个参数 且 该参数的类型是入参的父类或同类
                 if (Modifier.isPublic(constructor.getModifiers())
                         && constructor.getParameterTypes().length == 1
                         && constructor.getParameterTypes()[0].isAssignableFrom(paramType)) {
@@ -979,6 +982,7 @@ public final class ReflectUtils {
                     break;
                 }
             }
+            // 没有就抛异常
             if (targetConstructor == null) {
                 throw e;
             }
@@ -1010,21 +1014,40 @@ public final class ReflectUtils {
         return false;
     }
 
+    // 返回入参returnType的类型对应的默认值
     public static Object getEmptyObject(Class<?> returnType) {
         return getEmptyObject(returnType, new HashMap<Class<?>, Object>(), 0);
     }
 
+
+
+    /**
+     * 返回入参returnType的类型对应的默认值 ,
+     * 例如
+     * 若 returnType=int.class 则返回0
+     * 若入参returnType是自定义类，则将类的实例中的属性都赋上默认值后，再返回该实例（返回的实例中，接口类型的属性默认值为null）
+     *
+     * @param returnType clazz 要返回默认值的类型
+     * @param emptyInstances 存放entry（returnType， returnType类型的实例对象）的map，做缓存用
+     * @param level 控制递归层次，避免类A中有属性是类B，类B有属性是类C，类C有属性是类D，导致递归层次太深的情况出现
+     * @return
+     */
     private static Object getEmptyObject(Class<?> returnType, Map<Class<?>, Object> emptyInstances, int level) {
         if (level > 2) {
+            // 递归层次<=2
             return null;
         }
+        // 若入参returnType为空，则返回空
         if (returnType == null) {
             return null;
-        } else if (returnType == boolean.class || returnType == Boolean.class) {
+        } // 若入参returnType为布尔类型，则返回false
+        else if (returnType == boolean.class || returnType == Boolean.class) {
             return false;
-        } else if (returnType == char.class || returnType == Character.class) {
+        } // 若入参returnType为字符类型，则返回'\0'
+        else if (returnType == char.class || returnType == Character.class) {
             return '\0';
-        } else if (returnType == byte.class || returnType == Byte.class) {
+        } // 若入参returnType为Byte、Short、Integer、Long，Fload，Double类型，则返回0
+        else if (returnType == byte.class || returnType == Byte.class) {
             return (byte) 0;
         } else if (returnType == short.class || returnType == Short.class) {
             return (short) 0;
@@ -1036,9 +1059,11 @@ public final class ReflectUtils {
             return 0F;
         } else if (returnType == double.class || returnType == Double.class) {
             return 0D;
-        } else if (returnType.isArray()) {
+        } // 若入参returnType为数组类型，则返回长度为0的数组
+        else if (returnType.isArray()) {
             return Array.newInstance(returnType.getComponentType(), 0);
-        } else if (returnType.isAssignableFrom(ArrayList.class)) {
+        } // 若入参returnType为ArrayList,HashSet,HashMap类型, 则new一个对象返回
+        else if (returnType.isAssignableFrom(ArrayList.class)) {
             return new ArrayList<Object>(0);
         } else if (returnType.isAssignableFrom(HashSet.class)) {
             return new HashSet<Object>(0);
@@ -1046,8 +1071,10 @@ public final class ReflectUtils {
             return new HashMap<Object, Object>(0);
         } else if (String.class.equals(returnType)) {
             return "";
-        } else if (!returnType.isInterface()) {
+        } // 若入参returnType不是接口类型，而是个具体的类
+        else if (!returnType.isInterface()) {
             try {
+                // 将（returnType，value）添加到emptyInstances，其中value是returnType类型的实例对象
                 Object value = emptyInstances.get(returnType);
                 if (value == null) {
                     value = returnType.newInstance();
@@ -1056,16 +1083,19 @@ public final class ReflectUtils {
                 Class<?> cls = value.getClass();
                 while (cls != null && cls != Object.class) {
                     Field[] fields = cls.getDeclaredFields();
+                    // 为value对象的每个属性， 设置默认值
                     for (Field field : fields) {
                         if (field.isSynthetic()) {
                             continue;
                         }
+                        // 递归给字段赋默认值
                         Object property = getEmptyObject(field.getType(), emptyInstances, level + 1);
                         if (property != null) {
                             try {
                                 if (!field.isAccessible()) {
                                     field.setAccessible(true);
                                 }
+                                // 给value对象的field字段赋值，值为property
                                 field.set(value, property);
                             } catch (Throwable e) {
                             }
@@ -1073,11 +1103,13 @@ public final class ReflectUtils {
                     }
                     cls = cls.getSuperclass();
                 }
+                // 返回字段已赋上默认值的value对象
                 return value;
             } catch (Throwable e) {
                 return null;
             }
         } else {
+            // 若入参returnType接口类型，返回null
             return null;
         }
     }
