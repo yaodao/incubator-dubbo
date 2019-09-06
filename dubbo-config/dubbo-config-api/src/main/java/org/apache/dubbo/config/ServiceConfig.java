@@ -94,6 +94,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
      * A {@link ProxyFactory} implementation that will generate a exported service proxy,the JavassistProxyFactory is its
      * default implementation
      */
+    // 获取一个动态生成的ProxyFactory$Adaptive类（因为ProxyFactory接口没有使用@Adaptive标注的实现类，所以会动态生成一个$Adaptive类）
     private static final ProxyFactory proxyFactory = ExtensionLoader.getExtensionLoader(ProxyFactory.class).getAdaptiveExtension();
 
     /**
@@ -467,25 +468,29 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             // getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path) ,这句代码返回{contextpath}/{path}  或者 {path}
             // pathKey= "{group}/{path}:{version}"
             String pathKey = URL.buildKey(getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path), group, version);
+            // 生成一个ProviderModel对象，并给它的成员变量赋值
             ProviderModel providerModel = new ProviderModel(pathKey, ref, interfaceClass);
+            // 将providerModel添加到ApplicationModel中
             ApplicationModel.initProviderModel(pathKey, providerModel);
 
             //  URL 组装的过程
+            // 遍历 protocols，并在每个协议下导出服务
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
     }
 
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
         String name = protocolConfig.getName();
+        // 如果协议名为空，或空串，则将协议名变量设置为 dubbo
         if (StringUtils.isEmpty(name)) {
             name = Constants.DUBBO;
         }
 
         Map<String, String> map = new HashMap<String, String>();
-        // 新增entry("side"， "provider")
-        map.put(Constants.SIDE_KEY, Constants.PROVIDER_SIDE);
-
+        // 添加 side、版本、时间戳以及进程号等信息到 map 中
+        map.put(Constants.SIDE_KEY, Constants.PROVIDER_SIDE); // 新增entry("side"， "provider")
         appendRuntimeParameters(map);
+
         // 通过反射将各个对象的字段信息添加到 map 中
         appendParameters(map, metrics);
         appendParameters(map, application);
@@ -495,17 +500,18 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         appendParameters(map, this);
 
         // 这段代码用于检测 <dubbo:method> 标签中的配置信息，并将相关配置添加到 map 中。
+        // MethodConfig对象中存储了 <dubbo:method> 标签的配置信息，methods是MethodConfig对象的集合
         if (CollectionUtils.isNotEmpty(methods)) {
             for (MethodConfig method : methods) {
-                // 添加 MethodConfig 对象的字段信息到 map 中，key = 方法名.属性名。
+                // 添加 MethodConfig 对象的字段信息到 map 中。
                 // 比如 <dubbo:method name="sayHello" retries="2"> 对应的 MethodConfig，
-                // 存储到map中，map = {"sayHello.retries": 2}
+                // 存储到map中，map = {"sayHello.retries": 2}，可以看出 key = 方法名.属性名
                 appendParameters(map, method, method.getName());
 
                 // 检测 MethodConfig对象的 retry属性值 是否为 false，若是，则设置重试次数为0， 将（"sayHello.retries", "0"）放到map中
-                // retryKey = "sayHello.retry"
                 String retryKey = method.getName() + ".retry";
                 if (map.containsKey(retryKey)) {
+                    // 移除 retryKey = "sayHello.retry" ，注意： 这里是"retry" 不是上面的 "retries"
                     String retryValue = map.remove(retryKey);
                     if ("false".equals(retryValue)) {
                         map.put(method.getName() + ".retries", "0");
@@ -612,11 +618,13 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         // 获取 host 和 port
         String host = this.findConfigedHosts(protocolConfig, registryURLs, map);
         Integer port = this.findConfigedPorts(protocolConfig, name, map);
+
         // 组装 URL
         URL url = new URL(name, host, port, getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path), map);
 
         // 前置工作做完，接下来就可以进行服务导出了，服务导出分为导出到本地 (JVM)，和导出到远程
 
+        // 如果url使用的协议存在扩展，则调用对应的扩展来修改原url
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
                 .hasExtension(url.getProtocol())) {
             // 加载 ConfiguratorFactory，并生成 Configurator 实例，然后通过实例配置 url
@@ -628,6 +636,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         String scope = url.getParameter(Constants.SCOPE_KEY);
         // don't export when none is configured
         // 若scope != "none" 则进入if, 若scope = none，则什么都不做，直接结束
+        // 配置为none不暴露
         if (!Constants.SCOPE_NONE.equalsIgnoreCase(scope)) {
 
             // export to local if the config is not remote (export to remote only when config is remote)
@@ -636,7 +645,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                 exportLocal(url);
             }
             // export to remote if the config is not local (export to local only when config is local)
-            // scope != local，则导出到远程
+            // scope != local，则暴露为远程服务
             if (!Constants.SCOPE_LOCAL.equalsIgnoreCase(scope)) {
                 if (logger.isInfoEnabled()) {
                     logger.info("Export dubbo service " + interfaceClass.getName() + " to url " + url);
@@ -661,13 +670,16 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                             registryURL = registryURL.addParameter(Constants.PROXY_KEY, proxy);
                         }
 
+                        // 通过代理工厂将ref对象转化成invoker对象
                         // 为服务提供类(ref)生成 Invoker
                         Invoker<?> invoker = proxyFactory.getInvoker(ref, (Class) interfaceClass, registryURL.addParameterAndEncoded(Constants.EXPORT_KEY, url.toFullString()));
                         // DelegateProviderMetaDataInvoker 用于持有 Invoker 和 ServiceConfig
+                        // 代理invoker对象
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
 
                         // 导出服务，并生成 Exporter （使用RegistryProtocol ）
                         Exporter<?> exporter = protocol.export(wrapperInvoker);
+                        // 一个服务可能有多个提供者，保存在一起
                         exporters.add(exporter);
                     }
                 }  // 不存在注册中心，仅导出服务
@@ -738,18 +750,22 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
     private String findConfigedHosts(ProtocolConfig protocolConfig, List<URL> registryURLs, Map<String, String> map) {
         boolean anyhost = false;
 
-        // 从系统环境变量中取"DUBBO_IP_TO_BIND"对应的配置值
+        // 从系统环境变量中取key="DUBBO_IP_TO_BIND"对应的配置值
         String hostToBind = getValueFromConfig(protocolConfig, Constants.DUBBO_IP_TO_BIND);
 
         // if bind ip is not found in environment, keep looking up
+        // 若系统环境变量中没找到，继续找
         if (StringUtils.isEmpty(hostToBind)) {
+            // 从入参protocolConfig对象中取host
             hostToBind = protocolConfig.getHost();
             if (provider != null && StringUtils.isEmpty(hostToBind)) {
+                // 从成员变量provider中取host
                 hostToBind = provider.getHost();
             }
 
             if (StringUtils.isEmpty(hostToBind)) {
                 anyhost = true;
+                // 取本机的ip地址
                 hostToBind = getLocalHost();
 
                 if (StringUtils.isEmpty(hostToBind)) {
@@ -759,15 +775,16 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             }
         }
 
+        // 到这里，终于找到个ip
         // key="bind.ip" value是ip地址
         map.put(Constants.BIND_IP_KEY, hostToBind);
 
         // registry ip is not used for bind ip by default
-        // 从系统环境变量中取"DUBBO_IP_TO_REGISTRY"对应的配置值
+        // 从系统环境变量中取key="DUBBO_IP_TO_REGISTRY"对应的配置值
         String hostToRegistry = getValueFromConfig(protocolConfig, Constants.DUBBO_IP_TO_REGISTRY);
         if (StringUtils.isEmpty(hostToRegistry)) {
             // bind ip is used as registry ip by default
-            // 若系统环境变量取不到值，默认值取hostToBind
+            // 若系统环境变量取不到值，则默认值取hostToBind
             hostToRegistry = hostToBind;
         }
 
@@ -808,40 +825,50 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
      * @param name
      * @return
      */
+    // 查找端口号
+    // 查找顺序是 系统环境 -> @SPI对应的实现类 -> 随机生成
     private Integer findConfigedPorts(ProtocolConfig protocolConfig, String name, Map<String, String> map) {
         Integer portToBind = null;
 
         // parse bind port from environment
-        // 从系统环境变量中取"DUBBO_PORT_TO_BIND"对应的配置值
+        // 从系统环境变量中取key="DUBBO_PORT_TO_BIND"对应的配置值
         String port = getValueFromConfig(protocolConfig, Constants.DUBBO_PORT_TO_BIND);
         portToBind = parsePort(port);
 
         // if there's no bind port found from environment, keep looking up.
+        // 如果从环境中取不到端口号，则继续从别处取
         if (portToBind == null) {
+            // 从protocolConfig中取端口号
             portToBind = protocolConfig.getPort();
             // 从ProviderConfig对象中取port
             if (provider != null && (portToBind == null || portToBind == 0)) {
                 portToBind = provider.getPort();
             }
             // 入参name="dubbo"时， defaultPort=20880
+            // 从Protocol的实现类中，取默认的端口号（从别名为name的实现类中取）
             final int defaultPort = ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(name).getDefaultPort();
             if (portToBind == null || portToBind == 0) {
                 portToBind = defaultPort;
             }
             if (portToBind == null || portToBind <= 0) {
+                // 从缓存中取该protocol的端口号
                 portToBind = getRandomPort(name);
                 if (portToBind == null || portToBind < 0) {
+                    // 缓存没有，则任意获取一个可用的添加进去
                     portToBind = getAvailablePort(defaultPort);
                     putRandomPort(name, portToBind);
                 }
             }
         }
 
+        // 到这portToBind肯定是赋上值了。
+
         // save bind port, used as url's key later
+        // 新增entry（"bind.port"，port）添加到入参map
         map.put(Constants.BIND_PORT_KEY, String.valueOf(portToBind));
 
         // registry port, not used as bind port by default
-        // 从系统环境变量中取"DUBBO_PORT_TO_REGISTRY"对应的配置值
+        // 从系统环境变量中取key="DUBBO_PORT_TO_REGISTRY"对应的配置值
         String portToRegistryStr = getValueFromConfig(protocolConfig, Constants.DUBBO_PORT_TO_REGISTRY);
         Integer portToRegistry = parsePort(portToRegistryStr);
         if (portToRegistry == null) {
@@ -869,11 +896,11 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         return port;
     }
 
-    // 分别用入参 key 和 前缀加key 来取系统环境变量的值， 前缀是入参protocolConfig的name属性值
+    // 分别用入参 key 和 前缀加key 来取系统环境变量的值（其中，前缀是入参protocolConfig的name属性值）
     private String getValueFromConfig(ProtocolConfig protocolConfig, String key) {
         // 举例: protocolPrefix="DUBBO_"
         String protocolPrefix = protocolConfig.getName().toUpperCase() + "_";
-        //  参数key加前缀： "DUBBO_{key}"
+        //  参数为： "DUBBO_{key}"， 即 加了前缀的key， 从环境中取值
         String port = ConfigUtils.getSystemProperty(protocolPrefix + key);
         if (StringUtils.isEmpty(port)) {
             // 参数key不加前缀，再取一次配置

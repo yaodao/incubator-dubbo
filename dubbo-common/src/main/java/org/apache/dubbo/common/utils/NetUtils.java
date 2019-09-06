@@ -65,24 +65,34 @@ public class NetUtils {
     private static final String SPLIT_IPV4_CHARECTER = "\\.";
     private static final String SPLIT_IPV6_CHARECTER = ":";
 
+    // 随机返回一个[30000, 39999] 之间的整数
     public static int getRandomPort() {
         return RND_PORT_START + ThreadLocalRandom.current().nextInt(RND_PORT_RANGE);
     }
 
+    // 创建一个socket对象，返回该socket正在侦听的端口号，
+    // 不行则返回一个[30000, 39999] 之间的整数
     public static int getAvailablePort() {
         try (ServerSocket ss = new ServerSocket()) {
+            // 默认绑定本机的ip
             ss.bind(null);
+            // 返回ss正在监听的端口号
             return ss.getLocalPort();
         } catch (IOException e) {
+            // 返回一个[30000, 39999] 之间的随机整数
             return getRandomPort();
         }
     }
 
-    // 在参数 [port, MAX_PORT) 之间选一个有效的接口
+    // 若入参port<=0， 则任意获取一个本机的端口号 或者 一个[30000, 39999] 之间的随机整数
+    // 若入参port>0，则在参数 [port, MAX_PORT) 之间选一个有效的端口号（可连接上的端口号）
     public static int getAvailablePort(int port) {
         if (port <= 0) {
+            // 若入参port<=0， 则获取一个本机的端口号 或者 一个[30000, 39999] 之间的随机整数
             return getAvailablePort();
         }
+
+        // 在 [port，MAX_PORT)之间，测试出一个可以连接上的端口号
         for (int i = port; i < MAX_PORT; i++) {
             try (ServerSocket ss = new ServerSocket(i)) {
                 return i;

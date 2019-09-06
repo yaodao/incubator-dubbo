@@ -183,6 +183,7 @@ public class RpcUtils {
         return isAsync;
     }
 
+    // 判断入参inv的"future_returntype"属性是否为true
     public static boolean isReturnTypeFuture(Invocation inv) {
         return Boolean.TRUE.toString().equals(inv.getAttachment(Constants.FUTURE_RETURNTYPE_KEY));
     }

@@ -30,9 +30,13 @@ import java.util.Map;
 // 比如服务的配置信息，服务实例等。每个被导出的服务对应一个 ProviderModel。
 // ApplicationModel 持有所有的 ProviderModel。
 public class ProviderModel {
+    // "{group}/{interfaceName}:{version}"
     private final String serviceName;
+    // 接口的实例对象
     private final Object serviceInstance;
+    // 对外导出的服务接口类型
     private final Class<?> serviceInterfaceClass;
+    // key是导出接口中的方法名，value是ProviderMethodModel对象的集合（该接口中的每个方法对应一个ProviderMethodModel对象，这里用集合做value，可能是用于后期扩展）
     private final Map<String, List<ProviderMethodModel>> methods = new HashMap<String, List<ProviderMethodModel>>();
 
     public ProviderModel(String serviceName, Object serviceInstance, Class<?> serviceInterfaceClass) {
@@ -43,7 +47,7 @@ public class ProviderModel {
         this.serviceName = serviceName;
         this.serviceInstance = serviceInstance;
         this.serviceInterfaceClass = serviceInterfaceClass;
-
+        // 使用接口serviceInterfaceClass中的方法 填充成员变量methods
         initMethod();
     }
 
@@ -80,13 +84,16 @@ public class ProviderModel {
         return null;
     }
 
+    // 该方法就是使用接口serviceInterfaceClass中的方法 填充成员变量methods（key是方法名，value是ProviderMethodModel对象的集合）
     private void initMethod() {
         Method[] methodsToExport = null;
+        // 接口中的所有方法
         methodsToExport = this.serviceInterfaceClass.getMethods();
 
         for (Method method : methodsToExport) {
             method.setAccessible(true);
 
+            // 为单个方法生成对应的ProviderMethodModel对象
             List<ProviderMethodModel> methodModels = methods.get(method.getName());
             if (methodModels == null) {
                 methodModels = new ArrayList<ProviderMethodModel>(1);

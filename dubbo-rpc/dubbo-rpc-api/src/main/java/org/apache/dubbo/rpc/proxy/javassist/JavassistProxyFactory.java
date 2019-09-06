@@ -36,17 +36,19 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
     }
 
     @Override
+    // proxy是接口的实现类的对象，type是接口 （proxy是type的子类）
     public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
         // TODO Wrapper cannot handle this scenario correctly: the classname contains '$'
-        // 类全名没有"$"， 则返回入参proxy的clazz，
-        // 类全名有"$"（内部类的全名有$）， 则返回type
-        final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);
-        // new了一个AbstractProxyInvoker的子类对象， 返回
+        // 获取动态生成的proxy或者type 的包装类对象
+        final Wrapper wrapper = Wrapper.getWrapper(proxy.getClass().getName().indexOf('$') < 0 ? proxy.getClass() : type);  // 类全名没有"$"， 则返回入参proxy的clazz，类全名有"$"（内部类的全名有$）， 则返回type
+        // 返回一个Invoker的子类对象
         return new AbstractProxyInvoker<T>(proxy, type, url) {
             @Override
             protected Object doInvoke(T proxy, String methodName,
                                       Class<?>[] parameterTypes,
                                       Object[] arguments) throws Throwable {
+                // 注意： 这里的wrapper就是刚才动态生成的Wrapper类的子类对象
+                // 调用wrapper对象的invokeMethod方法（相当于间接调用proxy对象的methodName方法）
                 return wrapper.invokeMethod(proxy, methodName, parameterTypes, arguments);
             }
         };

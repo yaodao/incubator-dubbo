@@ -460,15 +460,42 @@ public class Test {
 //        System.out.println(methodReturnType);
 //    }
 
+//    public static void main(String[] args) {
+////        int  arr[] = new int[3];
+//        String  arr[] = new String[3];
+//        Object tem = Array.newInstance(arr.getClass().getComponentType(), 2);
+////        System.out.println(((int [])tem).length);
+//        System.out.println(((String [])tem).length);
+//        if (((String [])tem)[0] == null){
+//            System.out.println("hehe");
+//        }
+//        Arrays.stream((String [])tem).forEach(elem-> System.out.println("aa"+elem+"bb"));
+//
+//        System.out.println(arr.getClass().getSuperclass());
+//
+//        Object[] array = new Object[32];
+//
+//        Stu obj = new Stu();
+//        Arrays.fill(array, obj);
+//        obj.setStuName("hehe");
+//        System.out.println(Arrays.asList(array));
+//    }
+
+//    public static int aa = new Random().nextInt(10);
+//    public int bb;
+//    public Test(int param){
+//        bb = param;
+//    }
+//    public static void main(String[] args) {
+//        Test obj = new Test(11);
+//        System.out.println(obj.aa);
+//        System.out.println(obj.bb);
+//        Test obj2 = new Test(22);
+//        System.out.println(obj2.aa);
+//        System.out.println(obj2.bb);
+//    }
+
     public static void main(String[] args) {
-//        int  arr[] = new int[3];
-        String  arr[] = new String[3];
-        Object tem = Array.newInstance(arr.getClass().getComponentType(), 2);
-//        System.out.println(((int [])tem).length);
-        System.out.println(((String [])tem).length);
-        if (((String [])tem)[0] == null){
-            System.out.println("hehe");
-        }
-        Arrays.stream((String [])tem).forEach(elem-> System.out.println("aa"+elem+"bb"));
+
     }
 }

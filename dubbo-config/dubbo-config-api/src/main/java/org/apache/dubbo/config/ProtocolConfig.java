@@ -37,12 +37,18 @@ import java.util.Map;
  *
  * @export
  */
+
+
 public class ProtocolConfig extends AbstractConfig {
 
     private static final long serialVersionUID = 6913423882496634749L;
 
     /**
      * Protocol name
+     *
+     * name用于指定使用的协议，值可以是 dubbo， rmi ，hessian， webservice ，http等
+     * 代表常见的传输协议：Dubbo、RMI、Hessain、WebService、Http 等
+     * 这点也可以从Protocol的那些实现类看出。
      */
     private String name;
 

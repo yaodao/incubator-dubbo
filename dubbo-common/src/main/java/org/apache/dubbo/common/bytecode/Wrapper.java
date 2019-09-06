@@ -80,11 +80,11 @@ public abstract class Wrapper {
 
         @Override
         /**
-         * 根据入参mn来调用instance的相应方法
+         * 根据入参mn的值，调用instance对象的相应方法
          *
          *
          * @param instance instance. 实际使用对象（被包装的对象）
-         * @param mn       method name. 方法名字符串
+         * @param mn       method name. 方法名
          * @param types
          * @param args     argument array. 被调用的方法的参数
          * @return
@@ -113,9 +113,10 @@ public abstract class Wrapper {
 
     /**
      * get wrapper.
-     * 返回入参c的包装类，没有则创建一个包装类，再返回该包装类
+     * 返回入参c的包装类对象，
+     * 若缓存中没有，则创建一个包装类，放到缓存中，再返回该包装类对象
      *
-     * @param c Class instance.
+     * @param c Class instance. 包装类的瓤clazz
      * @return Wrapper instance(not null).
      */
     public static Wrapper getWrapper(Class<?> c) {
@@ -129,15 +130,29 @@ public abstract class Wrapper {
             return OBJECT_WRAPPER;
         }
 
+        // 从缓存中取包装类对象，没有则创建一个，放到缓存中
         Wrapper ret = WRAPPER_MAP.get(c);
         if (ret == null) {
+            // 生成c的包装类对象
             ret = makeWrapper(c);
             WRAPPER_MAP.put(c, ret);
         }
         return ret;
     }
 
-    // 创建入参c的一个包装类，并返回该包装类
+
+    /**
+     * 生成一个继承自Wrapper的类，如下，Wrapper0是针对入参c的一个包装类
+     * public class Wrapper0 extends Wrapper {}
+     *
+     * Wrapper0是针对入参c的一个包装类， 会对c的操作进行代理。
+     * （说明： 这个代理并不是将c作为Wrapper0的成员变量的那种代理。
+     * 而是外部将c的实例对象当参数 传入Wrapper0的方法，比如传入方法fun，之后在fun内部调用c的相应方法）
+     *
+     * @param c 被包装的类
+     * @return Wrapper的子类对象
+     */
+    // 下面使用入参 c=org.apache.dubbo.common.utils.Stu.class 举例
     private static Wrapper makeWrapper(Class<?> c) {
         if (c.isPrimitive()) {
             // 基本类型没有包装类
@@ -149,7 +164,7 @@ public abstract class Wrapper {
 
 
         /**
-         * c1最终串 举例：
+         * c1最终串 举例： （使用入参 c=org.apache.dubbo.common.utils.Stu.class 举例）
          *
          *    public void setPropertyValue(Object o, String n, Object v) {
          *         org.apache.dubbo.common.utils.Stu w;
@@ -378,7 +393,7 @@ public abstract class Wrapper {
         c2.append(" throw new " + NoSuchPropertyException.class.getName() + "(\"Not found property \\\"\"+$2+\"\\\" field or setter method in class " + c.getName() + ".\"); }");
         // 上面给c1，c2，c3赋值完毕了
         // make class
-        // 下面就开始动态生成字节码了
+        // 下面就开始动态添加字节码了
         long id = WRAPPER_CLASS_COUNTER.getAndIncrement();
         ClassGenerator cc = ClassGenerator.newInstance(cl);
         // 若c是public修饰的类，则它的新建的包装类，类名="org.apache.dubbo.common.bytecode.Wrapper{id}"
@@ -466,6 +481,7 @@ public abstract class Wrapper {
             for (Method m : ms.values()) {
                 wc.getField("mts" + ix++).set(null, m.getParameterTypes());
             }
+            // 创建刚构造出的Wrapper类的对象
             return (Wrapper) wc.newInstance();
         } catch (RuntimeException e) {
             throw e;
@@ -661,11 +677,11 @@ public abstract class Wrapper {
     /**
      * invoke method.
      *
-     * @param instance instance.
-     * @param mn       method name.
-     * @param types
-     * @param args     argument array.
-     * @return return value.
+     * @param instance instance. 实例对象
+     * @param mn       method name. 方法名
+     * @param types 参数类型
+     * @param args     argument array. 参数的值
+     * @return return value. 将mn被调用后的结果 返回
      */
     abstract public Object invokeMethod(Object instance, String mn, Class<?>[] types, Object[] args) throws NoSuchMethodException, InvocationTargetException;
 }

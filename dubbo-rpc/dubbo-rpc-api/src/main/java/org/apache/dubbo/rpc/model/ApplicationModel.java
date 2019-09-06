@@ -73,7 +73,7 @@ public class ApplicationModel {
     // 给成员变量providedServices添加entry
     public static void initProviderModel(String serviceName, ProviderModel providerModel) {
         if (providedServices.putIfAbsent(serviceName, providerModel) != null) {
-            // 若providedServices中有该serviceName对应的value，则log
+            // 若providedServices中已经有该serviceName对应的value，则log
             LOGGER.warn("Already register the same:" + serviceName);
         }
     }
