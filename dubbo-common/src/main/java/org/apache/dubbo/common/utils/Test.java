@@ -18,9 +18,7 @@ import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.LockSupport;
@@ -495,7 +493,37 @@ public class Test {
 //        System.out.println(obj2.bb);
 //    }
 
-    public static void main(String[] args) {
-
+    public void fun1(){
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> "Hello");
+        future.completeExceptionally(new Exception());
+        try {
+            System.out.println(future.get());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            System.out.println("hehe");
+            e.printStackTrace();
+        }
     }
+
+    public void fun2() throws InterruptedException {
+        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> "Hello");
+//        Thread.sleep(1000);
+        future.complete("World");
+        Thread.sleep(2000);
+        try {
+            System.out.println(future.get());
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void main(String[] args) throws InterruptedException {
+        Test obj = new Test();
+        obj.fun2();
+    }
+
 }

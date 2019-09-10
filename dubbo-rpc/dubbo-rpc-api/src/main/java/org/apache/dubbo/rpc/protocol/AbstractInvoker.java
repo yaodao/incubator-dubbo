@@ -138,6 +138,7 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
         if (CollectionUtils.isNotEmptyMap(attachment)) {
             invocation.addAttachmentsIfAbsent(attachment);
         }
+        // 获取RpcContext对象的attachments属性
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
         if (CollectionUtils.isNotEmptyMap(contextAttachments)) {
             /**
@@ -146,14 +147,19 @@ public abstract class AbstractInvoker<T> implements Invoker<T> {
              * by the built-in retry mechanism of the Dubbo. The attachment to update RpcContext will no longer work, which is
              * a mistake in most cases (for example, through Filter to RpcContext output traceId and spanId and other information).
              */
+            // 将参数map中的entry添加到invocation对象的attachments中，覆盖已有值
             invocation.addAttachments(contextAttachments);
         }
+        // 从url的parameters中取"{method}.async" 或者 "async"对应的value值，默认为false
         if (getUrl().getMethodParameter(invocation.getMethodName(), Constants.ASYNC_KEY, false)) {
+            // 给invocation的attachments添加entry（"async"，true）
             invocation.setAttachment(Constants.ASYNC_KEY, Boolean.TRUE.toString());
         }
+        // 添加（"id"，INVOKE_ID）到Invocation对象的attachments属性中
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
 
         try {
+            // 同步或者异步 向服务端发起请求，并返回结果
             return doInvoke(invocation);
         } catch (InvocationTargetException e) { // biz exception
             Throwable te = e.getTargetException();

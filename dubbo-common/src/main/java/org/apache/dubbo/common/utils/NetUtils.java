@@ -126,7 +126,10 @@ public class NetUtils {
     }
 
     // FIXME: should remove this method completely
+    // 入参host是否无效， true 无效
     public static boolean isInvalidLocalHost(String host) {
+        // host为null 或者 host长度为0 或者 host为"localhost"
+        // 或者 host为"0.0.0.0" 或者 host为"127"开头的ip地址串， 则返回true
         return host == null
                 || host.length() == 0
                 || host.equalsIgnoreCase(Constants.LOCALHOST_KEY)
@@ -214,21 +217,27 @@ public class NetUtils {
         return address == null ? Constants.LOCALHOST_VALUE : address.getHostAddress();
     }
 
+    // 判断入参host串的内容是否有效， 若无效 则会将其中的地址更改成本机的地址，返回更改后的值。
     public static String filterLocalHost(String host) {
         if (host == null || host.length() == 0) {
             return host;
         }
+        // 若host串中有"://"
         if (host.contains("://")) {
             URL u = URL.valueOf(host);
+            // 若url对象的host属性值不合法，则将host设置为本机地址，构造一个新的url对象，返回url串
             if (NetUtils.isInvalidLocalHost(u.getHost())) {
                 return u.setHost(NetUtils.getLocalHost()).toFullString();
             }
-        } else if (host.contains(":")) {
+        }// 若host串中有":"
+        else if (host.contains(":")) {
             int i = host.lastIndexOf(':');
+            // 若host无效，则返回本机地址+端口
             if (NetUtils.isInvalidLocalHost(host.substring(0, i))) {
                 return NetUtils.getLocalHost() + host.substring(i);
             }
         } else {
+            // 若host无效，则返回本机地址
             if (NetUtils.isInvalidLocalHost(host)) {
                 return NetUtils.getLocalHost();
             }

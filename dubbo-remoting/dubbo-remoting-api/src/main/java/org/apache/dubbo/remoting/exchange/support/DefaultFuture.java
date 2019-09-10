@@ -67,6 +67,7 @@ public class DefaultFuture implements ResponseFuture {
     private final long start = System.currentTimeMillis();
     private volatile long sent;
     private volatile Response response;
+    // 回调对象
     private volatile ResponseCallback callback;
 
     private DefaultFuture(Channel channel, Request request, int timeout) {
@@ -161,10 +162,12 @@ public class DefaultFuture implements ResponseFuture {
 
     @Override
     public Object get() throws RemotingException {
+        // 在timeout时间内获取调用服务端的结果，否则抛出异常
         return get(timeout);
     }
 
     @Override
+    // 在timeout时间内获取调用服务端的结果，否则抛出异常
     public Object get(int timeout) throws RemotingException {
         if (timeout <= 0) {
             timeout = Constants.DEFAULT_TIMEOUT;
@@ -175,6 +178,7 @@ public class DefaultFuture implements ResponseFuture {
             try {
                 while (!isDone()) {
                     done.await(timeout, TimeUnit.MILLISECONDS);
+                    // 完成 或者 超时 则跳出循环
                     if (isDone() || System.currentTimeMillis() - start > timeout) {
                         break;
                     }
@@ -185,6 +189,7 @@ public class DefaultFuture implements ResponseFuture {
                 lock.unlock();
             }
             if (!isDone()) {
+                // 调用服务端服务超时了，还没有返回结果，则抛出异常
                 throw new TimeoutException(sent > 0, channel, getTimeoutMessage(false));
             }
         }
@@ -205,14 +210,18 @@ public class DefaultFuture implements ResponseFuture {
     }
 
     @Override
+    // 若还没有收到响应，则给当前对象的成员变量callback设置值
     public void setCallback(ResponseCallback callback) {
         if (isDone()) {
+            // 有响应了，唤醒等待线程
             invokeCallback(callback);
         } else {
+            // 还没有收到响应
             boolean isdone = false;
             lock.lock();
             try {
                 if (!isDone()) {
+                    // 给当前对象的成员变量callback设置值
                     this.callback = callback;
                 } else {
                     isdone = true;
@@ -221,6 +230,7 @@ public class DefaultFuture implements ResponseFuture {
                 lock.unlock();
             }
             if (isdone) {
+                // 有响应了，唤醒等待线程
                 invokeCallback(callback);
             }
         }
@@ -250,6 +260,8 @@ public class DefaultFuture implements ResponseFuture {
         }
     }
 
+    // 调用服务端有结果了， 唤醒因为调用服务端的方法而阻塞的线程。
+    // 具体是通过ResponseCallback对象得到FutureAdapter对象，调用线程会在FutureAdapter.get()时阻塞，这里使用FutureAdapter.complete()唤醒这个阻塞的调用线程。
     private void invokeCallback(ResponseCallback c) {
         ResponseCallback callbackCopy = c;
         if (callbackCopy == null) {
@@ -260,22 +272,28 @@ public class DefaultFuture implements ResponseFuture {
             throw new IllegalStateException("response cannot be null. url:" + channel.getUrl());
         }
 
+        // 返回状态为OK时
         if (res.getStatus() == Response.OK) {
             try {
+                // 唤醒调用callbackCopy.get()的线程A， 线程A调用callbackCopy.get()会得到res.getResult()
                 callbackCopy.done(res.getResult());
             } catch (Exception e) {
                 logger.error("callback invoke error .result:" + res.getResult() + ",url:" + channel.getUrl(), e);
             }
-        } else if (res.getStatus() == Response.CLIENT_TIMEOUT || res.getStatus() == Response.SERVER_TIMEOUT) {
+        } // 返回状态为超时
+        else if (res.getStatus() == Response.CLIENT_TIMEOUT || res.getStatus() == Response.SERVER_TIMEOUT) {
             try {
                 TimeoutException te = new TimeoutException(res.getStatus() == Response.SERVER_TIMEOUT, channel, res.getErrorMessage());
+                // 唤醒调用callbackCopy.get()的线程A， 线程A调用callbackCopy.get()时会抛出异常te
                 callbackCopy.caught(te);
             } catch (Exception e) {
                 logger.error("callback invoke error ,url:" + channel.getUrl(), e);
             }
         } else {
+            // 返回状态为其他
             try {
                 RuntimeException re = new RuntimeException(res.getErrorMessage());
+                // 唤醒调用callbackCopy.get()的线程A， 线程A调用callbackCopy.get()时会抛出异常re
                 callbackCopy.caught(re);
             } catch (Exception e) {
                 logger.error("callback invoke error ,url:" + channel.getUrl(), e);
@@ -283,14 +301,17 @@ public class DefaultFuture implements ResponseFuture {
         }
     }
 
+    // 根据response对象的状态，返回mResult值，否则抛出异常
     private Object returnFromResponse() throws RemotingException {
         Response res = response;
         if (res == null) {
             throw new IllegalStateException("response cannot be null");
         }
+        // status=ok，则返回mResult值
         if (res.getStatus() == Response.OK) {
             return res.getResult();
         }
+        // status为其他，则抛出异常
         if (res.getStatus() == Response.CLIENT_TIMEOUT || res.getStatus() == Response.SERVER_TIMEOUT) {
             throw new TimeoutException(res.getStatus() == Response.SERVER_TIMEOUT, channel, res.getErrorMessage());
         }
@@ -329,10 +350,12 @@ public class DefaultFuture implements ResponseFuture {
         lock.lock();
         try {
             response = res;
+            // 收到调用结果后，则唤醒阻塞在done.await的线程
             done.signalAll();
         } finally {
             lock.unlock();
         }
+        // 若有回调对象，则唤醒回调线程
         if (callback != null) {
             invokeCallback(callback);
         }

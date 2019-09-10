@@ -155,8 +155,11 @@ public class RegistryProtocol implements Protocol {
         return overrideListeners;
     }
 
+    // 先创建注册中心实例，之后再通过注册中心实例注册服务
     public void register(URL registryUrl, URL registeredProviderUrl) {
+        // 获取注册中心实例
         Registry registry = registryFactory.getRegistry(registryUrl);
+        // 向注册中心注册服务
         registry.register(registeredProviderUrl);
     }
 
@@ -171,7 +174,7 @@ public class RegistryProtocol implements Protocol {
         // zookeeper://127.0.0.1:2181/com.alibaba.dubbo.registry.RegistryService?application=demo-provider&dubbo=2.0.2&export=dubbo%3A%2F%2F172.17.48.52%3A20880%2Fcom.alibaba.dubbo.demo.DemoService%3Fanyhost%3Dtrue%26application%3Ddemo-provider
         URL registryUrl = getRegistryUrl(originInvoker);
         // url to export locally
-        // 获取订阅 URL，比如：
+        // 获取已注册的服务提供者 URL 例如：
         // provider://172.17.48.52:20880/com.alibaba.dubbo.demo.DemoService?category=configurators&check=false&anyhost=true&application=demo-provider&dubbo=2.0.2&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello
         URL providerUrl = getProviderUrl(originInvoker);
 
@@ -179,6 +182,8 @@ public class RegistryProtocol implements Protocol {
         // FIXME When the provider subscribes, it will affect the scene : a certain JVM exposes the service and call
         //  the same service. Because the subscribed is cached key with the name of the service, it causes the
         //  subscription information to cover.
+        // 获取订阅 URL，比如：
+        // provider://172.17.48.52:20880/com.alibaba.dubbo.demo.DemoService?category=configurators&check=false&anyhost=true&application=demo-provider&dubbo=2.0.2&generic=false&interface=com.alibaba.dubbo.demo.DemoService&methods=sayHello
         final URL overrideSubscribeUrl = getSubscribedOverrideUrl(providerUrl);
         // 创建监听器
         final OverrideListener overrideSubscribeListener = new OverrideListener(overrideSubscribeUrl, originInvoker);
@@ -186,6 +191,7 @@ public class RegistryProtocol implements Protocol {
 
         providerUrl = overrideUrlWithConfig(providerUrl, overrideSubscribeListener);
         //export invoker
+        // 服务导出
         final ExporterChangeableWrapper<T> exporter = doLocalExport(originInvoker, providerUrl);
 
         // url to registry
@@ -196,16 +202,19 @@ public class RegistryProtocol implements Protocol {
         //to judge if we need to delay publish
         boolean register = registeredProviderUrl.getParameter("register", true);
         if (register) {
+            // 注册服务
             register(registryUrl, registeredProviderUrl);
             providerInvokerWrapper.setReg(true);
         }
 
         // Deprecated! Subscribe to override rules in 2.6.x or before.
+        // 向注册中心进行订阅 override 数据
         registry.subscribe(overrideSubscribeUrl, overrideSubscribeListener);
 
         exporter.setRegisterUrl(registeredProviderUrl);
         exporter.setSubscribeUrl(overrideSubscribeUrl);
         //Ensure that a new exporter instance is returned every time export
+        // 创建并返回 DestroyableExporter
         return new DestroyableExporter<>(exporter);
     }
 
@@ -226,6 +235,7 @@ public class RegistryProtocol implements Protocol {
             // 创建 Invoker 为委托类对象
             Invoker<?> invokerDelegate = new InvokerDelegate<>(originInvoker, providerUrl);
             // 调用 protocol 的 export 方法导出服务
+            // 此处的 protocol 变量会在运行时加载 DubboProtocol，并调用 DubboProtocol 的 export 方法
             return new ExporterChangeableWrapper<>((Exporter<T>) protocol.export(invokerDelegate), originInvoker);
         });
     }
@@ -326,9 +336,9 @@ public class RegistryProtocol implements Protocol {
 
     }
 
-    // 基于入参url的属性值新构造一个url返回
+    // 给入参url新增参数， 并构造一个新url返回
     private URL getSubscribedOverrideUrl(URL registeredProviderUrl) {
-        // 入参url设置protocol属性值为"provider"，并新增参数"category"="configurators"， "check"=false
+        // 设置入参url的protocol属性值为"provider"，并新增参数"category"="configurators"， "check"=false
         return registeredProviderUrl.setProtocol(PROVIDER_PROTOCOL)
                 .addParameters(CATEGORY_KEY, CONFIGURATORS_CATEGORY, CHECK_KEY, String.valueOf(false));
     }

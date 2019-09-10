@@ -461,7 +461,9 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void doExportUrls() {
+        // 加载注册中心链接
         List<URL> registryURLs = loadRegistries(true);
+        // 遍历 protocols，并在每个协议下导出服务
         for (ProtocolConfig protocolConfig : protocols) {
             // 先用protocolConfig得到pathKey，再用pathKey得到ProviderModel对象，之后将（pathKey，providerModel）放到ApplicationModel中
 
@@ -474,11 +476,13 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
             ApplicationModel.initProviderModel(pathKey, providerModel);
 
             //  URL 组装的过程
-            // 遍历 protocols，并在每个协议下导出服务
+            // 遍历 protocols，并在每个协议下导出服务，并在导出服务的过程中，将服务注册到注册中心。
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }
     }
 
+    // 在每个协议下导出服务，并在导出服务的过程中，将服务注册到注册中心。
+    // 入参registryURLs是注册中心的url对象集合
     private void doExportUrlsFor1Protocol(ProtocolConfig protocolConfig, List<URL> registryURLs) {
         String name = protocolConfig.getName();
         // 如果协议名为空，或空串，则将协议名变量设置为 dubbo
@@ -622,7 +626,11 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         // 组装 URL
         URL url = new URL(name, host, port, getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path), map);
 
-        // 前置工作做完，接下来就可以进行服务导出了，服务导出分为导出到本地 (JVM)，和导出到远程
+        /**
+         * 前置工作做完，接下来就可以进行服务导出了，服务导出分为导出到本地 (JVM)，和导出到远程
+         *
+         * hehe
+         */
 
         // 如果url使用的协议存在扩展，则调用对应的扩展来修改原url
         if (ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
@@ -632,7 +640,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                     .getExtension(url.getProtocol()).getConfigurator(url).configure(url);
         }
 
-        // 取url的"scope"属性值
+        // 取url的"scope"属性值，可以理解为导出范围
         String scope = url.getParameter(Constants.SCOPE_KEY);
         // don't export when none is configured
         // 若scope != "none" 则进入if, 若scope = none，则什么都不做，直接结束
@@ -677,7 +685,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                         // 代理invoker对象
                         DelegateProviderMetaDataInvoker wrapperInvoker = new DelegateProviderMetaDataInvoker(invoker, this);
 
-                        // 导出服务，并生成 Exporter （使用RegistryProtocol ）
+                        // 导出服务，并生成 Exporter （调用RegistryProtocol的export方法 ）
                         Exporter<?> exporter = protocol.export(wrapperInvoker);
                         // 一个服务可能有多个提供者，保存在一起
                         exporters.add(exporter);
@@ -705,8 +713,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void exportLocal(URL url) {
-        // 如果 URL 的协议头等于 injvm，说明已经导出到本地了，无需再次导出
-        // 入参url的"protocol"属性值 != "injvm"
+        // 如果 URL 的协议头等于 "injvm"，说明已经导出到本地了，无需再次导出， 若协议头不等于"injvm"，则进入if
         if (!Constants.LOCAL_PROTOCOL.equalsIgnoreCase(url.getProtocol())) {
             // 设置url的protocol="injvm"， host="127.0.0.1"，port=0
             URL local = URLBuilder.from(url)
@@ -714,7 +721,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
                     .setHost(LOCALHOST_VALUE)
                     .setPort(0)
                     .build();
-            // 创建 Invoker，并导出服务，这里的 protocol 会在运行时调用 InjvmProtocol类 的 export 方法
+            // 仅仅创建了一个 InjvmExporter，无其他逻辑。（这里的 protocol 会在运行时调用 InjvmProtocol类 的 export 方法）
             Exporter<?> exporter = protocol.export(
                     proxyFactory.getInvoker(ref, (Class) interfaceClass, local));
             exporters.add(exporter);

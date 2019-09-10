@@ -32,6 +32,7 @@ public abstract class AbstractExporter<T> implements Exporter<T> {
 
     private volatile boolean unexported = false;
 
+    // 给成员变量invoker赋值
     public AbstractExporter(Invoker<T> invoker) {
         if (invoker == null) {
             throw new IllegalStateException("service invoker == null");

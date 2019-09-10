@@ -44,6 +44,7 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
 
     private final URL url;
 
+    // 就是给当前对象的成员变量赋值
     public AbstractProxyInvoker(T proxy, Class<T> type, URL url) {
         if (proxy == null) {
             throw new IllegalArgumentException("proxy == null");
@@ -51,10 +52,11 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
         if (type == null) {
             throw new IllegalArgumentException("interface == null");
         }
-        // type是否为proxy的父类
+        // type是否为proxy的父类，不是则抛出异常
         if (!type.isInstance(proxy)) {
             throw new IllegalArgumentException(proxy.getClass().getName() + " not implement interface " + type);
         }
+        // 赋值
         this.proxy = proxy;
         this.type = type;
         this.url = url;
@@ -82,6 +84,7 @@ public abstract class AbstractProxyInvoker<T> implements Invoker<T> {
     // TODO Unified to AsyncResult?
     @Override
     public Result invoke(Invocation invocation) throws RpcException {
+        // 得到当前线程对应的RpcContext对象
         RpcContext rpcContext = RpcContext.getContext();
         try {
             Object obj = doInvoke(proxy, invocation.getMethodName(), invocation.getParameterTypes(), invocation.getArguments());

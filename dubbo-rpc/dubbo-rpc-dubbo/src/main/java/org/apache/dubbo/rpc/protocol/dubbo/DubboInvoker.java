@@ -67,9 +67,12 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
     }
 
     @Override
+    // 同步或者异步 向服务端发起请求，并返回结果。
     protected Result doInvoke(final Invocation invocation) throws Throwable {
         RpcInvocation inv = (RpcInvocation) invocation;
+        // 被调用的方法名
         final String methodName = RpcUtils.getMethodName(invocation);
+        // 给invocation对象的attachments添加属性值
         inv.setAttachment(Constants.PATH_KEY, getUrl().getPath());
         inv.setAttachment(Constants.VERSION_KEY, version);
 
@@ -80,16 +83,25 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
             currentClient = clients[index.getAndIncrement() % clients.length];
         }
         try {
+            // isAsync=true表示异步带回调
             boolean isAsync = RpcUtils.isAsync(getUrl(), invocation);
             boolean isAsyncFuture = RpcUtils.isReturnTypeFuture(inv);
+            // isOneway=true表示异步不带回调
             boolean isOneway = RpcUtils.isOneway(getUrl(), invocation);
+            // 从url中取"timeout"的值
             int timeout = getUrl().getMethodParameter(methodName, Constants.TIMEOUT_KEY, Constants.DEFAULT_TIMEOUT);
             if (isOneway) {
                 boolean isSent = getUrl().getMethodParameter(methodName, Constants.SENT_KEY, false);
+                // 客户端send完请求后，直接return一个空结果的RpcResult
                 currentClient.send(inv, isSent);
                 RpcContext.getContext().setFuture(null);
                 return new RpcResult();
             } else if (isAsync) {
+                /**
+                 * isAsync==true时，客户端发起请求，得到一个ResponseFuture，返回RpcResult，
+                 * 接下来当服务端处理完成，客户端Netty层在收到响应后会通过Future通知应用线程。
+                 */
+                // 客户端发请求
                 ResponseFuture future = currentClient.request(inv, timeout);
                 // For compatibility
                 FutureAdapter<Object> futureAdapter = new FutureAdapter<>(future);
@@ -103,8 +115,10 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
                     result = new SimpleAsyncRpcResult(futureAdapter, futureAdapter.getResultFuture(), false);
                 }
                 return result;
-            } else {
+            } // 同步情况下
+            else {
                 RpcContext.getContext().setFuture(null);
+                // 客户端发起请求，并通过get()方法阻塞等待服务端的响应结果。
                 return (Result) currentClient.request(inv, timeout).get();
             }
         } catch (TimeoutException e) {

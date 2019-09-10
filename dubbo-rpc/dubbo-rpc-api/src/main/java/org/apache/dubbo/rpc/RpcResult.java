@@ -23,6 +23,7 @@ import java.lang.reflect.Field;
  *
  * @serial Don't change the class name and properties.
  */
+// RPC调用结果
 public class RpcResult extends AbstractResult {
 
     private static final long serialVersionUID = -6925924956850004727L;
@@ -103,6 +104,8 @@ public class RpcResult extends AbstractResult {
      * @param e exception
      * @return exception after deal with stack trace
      */
+    // 若对象e的stackTrace属性为null，则给该属性设置为空数组，并返回e
+    // 即 e.setStackTrace(new StackTraceElement[0]);
     private Throwable handleStackTraceNull(Throwable e) {
         if (e != null) {
             try {
@@ -111,11 +114,17 @@ public class RpcResult extends AbstractResult {
                 while (!clazz.getName().equals(Throwable.class.getName())) {
                     clazz = clazz.getSuperclass();
                 }
+
+                // 能到这，说明clazz已经等于Throwable.class
+
                 // get stackTrace value
+                // 取Throwable.class的成员变量stackTrace
                 Field stackTraceField = clazz.getDeclaredField("stackTrace");
                 stackTraceField.setAccessible(true);
+                // 取对象e的成员变量stackTrace的值
                 Object stackTrace = stackTraceField.get(e);
                 if (stackTrace == null) {
+                    // 若对象e的stackTrace值是null，则置为空数组
                     e.setStackTrace(new StackTraceElement[0]);
                 }
             } catch (Throwable t) {

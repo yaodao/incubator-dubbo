@@ -329,7 +329,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                     // 若 address 为空，则将其设为 0.0.0.0
                     address = Constants.ANYHOST_VALUE;
                 }
-                // 若注册中心address有值
+                // 若注册中心address有值， 且值不是"N/A"
                 if (!RegistryConfig.NO_AVAILABLE.equalsIgnoreCase(address)) {
                     Map<String, String> map = new HashMap<String, String>();
                     // 添加 ApplicationConfig 中的字段信息到 map 中
@@ -343,6 +343,8 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                         // 增加entry("protocol", "dubbo")
                         map.put(Constants.PROTOCOL_KEY, Constants.DUBBO_PROTOCOL);
                     }
+                    // 上面就是填充map，这里开始用
+
                     // 解析得到 URL 列表，address 可能包含多个注册中心 ip，
                     // 因此解析得到的是一个 URL 列表
                     List<URL> urls = UrlUtils.parseURLs(address, map);
@@ -354,8 +356,8 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
                                 .setProtocol(Constants.REGISTRY_PROTOCOL)
                                 .build();
                         // 通过判断条件，决定是否添加 url 到 registryList 中，条件如下：
-                        // (服务提供者 && register = true)
-                        //    || (非服务提供者 && subscribe = true)
+                        // (服务提供者 && register = true 或 null)
+                        //    || (非服务提供者 && subscribe = true 或 null)
                         if ((provider && url.getParameter(Constants.REGISTER_KEY, true))
                                 || (!provider && url.getParameter(Constants.SUBSCRIBE_KEY, true))) {
                             registryList.add(url);

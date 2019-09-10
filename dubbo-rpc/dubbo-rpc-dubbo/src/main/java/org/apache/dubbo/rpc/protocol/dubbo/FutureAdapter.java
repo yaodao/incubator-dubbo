@@ -34,25 +34,35 @@ public class FutureAdapter<V> extends CompletableFuture<V> {
     private final ResponseFuture future;
     private CompletableFuture<Result> resultFuture;
 
+    // 生成一个FutureAdapter对象，它是CompletableFuture的子类
+    // 并给它的成员变量future的callback属性设置值（值是回调对象）
     public FutureAdapter(ResponseFuture future) {
         this.future = future;
         this.resultFuture = new CompletableFuture<>();
+        // 给future对象设置回调对象
         future.setCallback(new ResponseCallback() {
             @Override
+            // 唤醒被FutureAdapter.get()阻塞的线程，因为get到值了。
             public void done(Object response) {
                 Result result = (Result) response;
+                // 内部类对象中访问外部类对象的成员变量，需要用 “外部类.this” 的形式，“外部类.this” 表示外部类的对象。
                 FutureAdapter.this.resultFuture.complete(result);
                 V value = null;
                 try {
+                    // 得到value
                     value = (V) result.recreate();
                 } catch (Throwable t) {
+                    // 外部类对象 设置get()时抛出的异常
                     FutureAdapter.this.completeExceptionally(t);
                 }
+                // 外部类对象 设置get()时返回的结果
+                // 设置调用FutureAdapter.get()时，返回结果value
                 FutureAdapter.this.complete(value);
             }
 
             @Override
             public void caught(Throwable exception) {
+                // 设置，当调用FutureAdapter对象的get()方法时，抛出异常exception
                 FutureAdapter.this.completeExceptionally(exception);
             }
         });
@@ -81,6 +91,7 @@ public class FutureAdapter<V> extends CompletableFuture<V> {
     @SuppressWarnings("unchecked")
     public V get() throws InterruptedException, ExecutionException {
         try {
+            // 阻塞等待返回结果
             return super.get();
         } catch (ExecutionException | InterruptedException e) {
             throw e;
@@ -93,6 +104,7 @@ public class FutureAdapter<V> extends CompletableFuture<V> {
     @SuppressWarnings("unchecked")
     public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException {
         try {
+            // 阻塞等待指定时间内返回结果
             return super.get(timeout, unit);
         } catch (TimeoutException | ExecutionException | InterruptedException e) {
             throw e;

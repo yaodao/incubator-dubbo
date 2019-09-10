@@ -523,15 +523,19 @@ public final class StringUtils {
      * @param e
      * @return string
      */
+    // 将入参e的异常栈信息 以字符串形式返回
     public static String toString(Throwable e) {
         UnsafeStringWriter w = new UnsafeStringWriter();
         PrintWriter p = new PrintWriter(w);
+        // 将e的全名写入w （UnsafeStringWriter）
         p.print(e.getClass().getName());
         if (e.getMessage() != null) {
+            // 将e的描述写入w
             p.print(": " + e.getMessage());
         }
         p.println();
         try {
+            // 将e的异常栈信息写入w
             e.printStackTrace(p);
             return w.toString();
         } finally {

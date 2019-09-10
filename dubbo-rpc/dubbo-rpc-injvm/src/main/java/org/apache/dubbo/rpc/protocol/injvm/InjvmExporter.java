@@ -32,9 +32,11 @@ class InjvmExporter<T> extends AbstractExporter<T> {
     private final Map<String, Exporter<?>> exporterMap;
 
     InjvmExporter(Invoker<T> invoker, String key, Map<String, Exporter<?>> exporterMap) {
+        // 给成员变量invoker赋值
         super(invoker);
         this.key = key;
         this.exporterMap = exporterMap;
+        // (key，当前对象)添加到入参exporterMap
         exporterMap.put(key, this);
     }
 

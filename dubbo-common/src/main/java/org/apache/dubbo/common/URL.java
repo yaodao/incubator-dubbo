@@ -773,9 +773,13 @@ class URL implements Serializable {
         return URL.decode(getMethodParameter(method, key, defaultValue));
     }
 
+    // 先从parameters中取"{method}.{key}"对应的value值，
+    // 若为空，再从parameters中取"{key}"对应的value值。
     public String getMethodParameter(String method, String key) {
+        // 从parameters中取key="{method}.{key}" 对应的value值。
         String value = parameters.get(method + "." + key);
         if (StringUtils.isEmpty(value)) {
+            // 从parameters中取key="{key}" 对应的value值。
             return getParameter(key);
         }
         return value;
@@ -834,17 +838,21 @@ class URL implements Serializable {
         return l;
     }
 
+    // 从当前对象的numbers/parameters属性中 取"{method}.{key}" 或者 "{key}" 对应的value值，defaultValue是默认值
     public int getMethodParameter(String method, String key, int defaultValue) {
         String methodKey = method + "." + key;
+        // 从当前对象的numbers属性中取key="{method}.{key}"对应的值
         Number n = getNumbers().get(methodKey);
         if (n != null) {
             return n.intValue();
         }
+        // 从parameters中取"{method}.{key}" 或者 "{key}" 对应的value值
         String value = getMethodParameter(method, key);
         if (StringUtils.isEmpty(value)) {
             return defaultValue;
         }
         int i = Integer.parseInt(value);
+        // 将key="{method}.{key}"，value值 添加到当前对象的成员变量numbers中。
         getNumbers().put(methodKey, i);
         return i;
     }
@@ -953,6 +961,7 @@ class URL implements Serializable {
         return value.charAt(0);
     }
 
+    // 从parameters中取"{method}.{key}" 或者 "{key}"对应的value值，若为空，则返回默认值defaultValue
     public boolean getMethodParameter(String method, String key, boolean defaultValue) {
         String value = getMethodParameter(method, key);
         if (StringUtils.isEmpty(value)) {

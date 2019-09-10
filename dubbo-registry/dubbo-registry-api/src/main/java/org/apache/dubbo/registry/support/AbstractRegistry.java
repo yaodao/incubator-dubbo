@@ -353,7 +353,7 @@ public abstract class AbstractRegistry implements Registry {
     }
 
     @Override
-    // registered中新增一个url
+    // registered中新增一个url， 这个函数已经被子类覆盖（具体怎样实现注册，需要看具体子类实现）
     public void register(URL url) {
         if (url == null) {
             throw new IllegalArgumentException("register url == null");

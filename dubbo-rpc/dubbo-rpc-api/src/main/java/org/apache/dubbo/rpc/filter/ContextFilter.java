@@ -44,6 +44,7 @@ public class ContextFilter implements Filter {
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         Map<String, String> attachments = invocation.getAttachments();
         if (attachments != null) {
+            // 将"path"，"interface"，"group" ，"version"，"dubbo"，"token"，"timeout" 从invocation对象的attachments属性中移除
             attachments = new HashMap<>(attachments);
             attachments.remove(Constants.PATH_KEY);
             attachments.remove(Constants.INTERFACE_KEY);
@@ -53,10 +54,12 @@ public class ContextFilter implements Filter {
             attachments.remove(Constants.TOKEN_KEY);
             attachments.remove(Constants.TIMEOUT_KEY);
             // Remove async property to avoid being passed to the following invoke chain.
+            // 将"async"，"dubbo.tag"，"dubbo.force.tag" 移除，避免它们被传入接下来的调用链中
             attachments.remove(Constants.ASYNC_KEY);
             attachments.remove(Constants.TAG_KEY);
             attachments.remove(Constants.FORCE_USE_TAG);
         }
+        // 服务端在执行调用之前，会经过Filter处理，将信息写入RpcContext
         RpcContext.getContext()
                 .setInvoker(invoker)
                 .setInvocation(invocation)

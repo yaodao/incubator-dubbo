@@ -25,6 +25,7 @@ import java.util.Map;
  * @see org.apache.dubbo.rpc.Invoker#invoke(Invocation)
  * @see org.apache.dubbo.rpc.RpcInvocation
  */
+// 要执行的方法信息
 public interface Invocation {
 
     /**

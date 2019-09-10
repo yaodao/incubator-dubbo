@@ -210,6 +210,7 @@ public class ExtensionLoader<T> {
      * @return extension list which are activated.
      * @see #getActivateExtension(org.apache.dubbo.common.URL, String, String)
      */
+    // 在所有的使用@Activate标注的类中，要使用key指定的扩展
     public List<T> getActivateExtension(URL url, String key) {
         return getActivateExtension(url, key, null);
     }
@@ -222,6 +223,7 @@ public class ExtensionLoader<T> {
      * @return extension list which are activated
      * @see #getActivateExtension(org.apache.dubbo.common.URL, String[], String)
      */
+    // 在所有的使用@Activate标注的类中，使用 values指定的扩展
     public List<T> getActivateExtension(URL url, String[] values) {
         return getActivateExtension(url, values, null);
     }
@@ -235,6 +237,8 @@ public class ExtensionLoader<T> {
      * @return extension list which are activated.
      * @see #getActivateExtension(org.apache.dubbo.common.URL, String[], String)
      */
+
+    // 在所有的使用@Activate标注的类中，要指定的group 外加 使用key 指定的扩展
     public List<T> getActivateExtension(URL url, String key, String group) {
         String value = url.getParameter(key);
         return getActivateExtension(url, StringUtils.isEmpty(value) ? null : Constants.COMMA_SPLIT_PATTERN.split(value), group);

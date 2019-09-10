@@ -47,6 +47,12 @@ import java.util.concurrent.TimeoutException;
  * @export
  * @see org.apache.dubbo.rpc.filter.ContextFilter
  */
+
+/**
+ *  RpcContext 是一个 ThreadLocal 的临时状态记录器，当接收到 RPC 请求，或发起 RPC 请求时，RpcContext 的状态都会变化。
+ * 比如：A调B，B再调C，则B机器上，在B调C之前，RpcContext记录的是A调B的信息，在B调C之后，RpcContext记录的是B调C的信息。
+ *
+ */
 public class RpcContext {
 
     /**
@@ -109,6 +115,7 @@ public class RpcContext {
      *
      * @return server context
      */
+    // 从InternalThreadLocal取出当前线程对应的RpcContext对象
     public static RpcContext getServerContext() {
         return SERVER_LOCAL.get();
     }
@@ -131,6 +138,7 @@ public class RpcContext {
      *
      * @return context
      */
+    // 从InternalThreadLocal取出当前线程对应的RpcContext对象
     public static RpcContext getContext() {
         return LOCAL.get();
     }
@@ -140,6 +148,7 @@ public class RpcContext {
     }
 
 
+    // 将当前RpcContext对象 拷贝一份出来
     public RpcContext copyOf() {
         RpcContext copy = new RpcContext();
         copy.attachments.putAll(this.attachments);
@@ -234,7 +243,9 @@ public class RpcContext {
      *
      * @return consumer side.
      */
+    // 本端是否为消费端，是则返回true
     public boolean isConsumerSide() {
+        // 判断 url的parameters中key="side"对应的值 是否为 "consumer"， 是则返回true
         return getUrl().getParameter(Constants.SIDE_KEY, Constants.PROVIDER_SIDE).equals(Constants.CONSUMER_SIDE);
     }
 

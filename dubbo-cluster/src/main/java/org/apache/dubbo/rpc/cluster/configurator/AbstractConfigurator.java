@@ -48,7 +48,7 @@ public abstract class AbstractConfigurator implements Configurator {
     }
 
     @Override
-    // 使用成员变量configuratorUrl的parameters属性值来增强url对象的parameters属性值
+    // 使用成员变量configuratorUrl的parameters属性值来增强入参url对象的parameters属性值
     public URL configure(URL url) {
         // If override url is not enabled or is invalid, just return.
         // 若url/configuratorUrl的host为空，直接返回url； 若configuratorUrl的"enabled"属性值为true，直接返回url

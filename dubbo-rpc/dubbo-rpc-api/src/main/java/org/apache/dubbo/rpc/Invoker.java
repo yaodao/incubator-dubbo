@@ -25,6 +25,7 @@ import org.apache.dubbo.common.Node;
  * @see org.apache.dubbo.rpc.InvokerListener
  * @see org.apache.dubbo.rpc.protocol.AbstractInvoker
  */
+// 执行器接口
 public interface Invoker<T> extends Node {
 
     /**
@@ -41,6 +42,7 @@ public interface Invoker<T> extends Node {
      * @return result
      * @throws RpcException
      */
+    // 执行方法， Invocation 为执行信息（包括执行 哪个方法，参数等信息），Result为执行结果
     Result invoke(Invocation invocation) throws RpcException;
 
 }

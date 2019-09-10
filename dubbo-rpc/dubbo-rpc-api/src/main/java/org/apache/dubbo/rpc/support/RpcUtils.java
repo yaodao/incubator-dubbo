@@ -106,6 +106,7 @@ public class RpcUtils {
         return null;
     }
 
+    // 从Invocation对象的attachments中获取"id"属性值
     public static Long getInvocationId(Invocation inv) {
         String id = inv.getAttachment(Constants.ID_KEY);
         return id == null ? null : new Long(id);
@@ -117,16 +118,20 @@ public class RpcUtils {
      * @param url
      * @param inv
      */
+    // 添加（"id"，INVOKE_ID）到Invocation对象的attachments属性中
     public static void attachInvocationIdIfAsync(URL url, Invocation inv) {
         if (isAttachInvocationId(url, inv) && getInvocationId(inv) == null && inv instanceof RpcInvocation) {
             ((RpcInvocation) inv).setAttachment(Constants.ID_KEY, String.valueOf(INVOKE_ID.getAndIncrement()));
         }
     }
 
+    // 是否需要添加invocationid，true 需要
     private static boolean isAttachInvocationId(URL url, Invocation invocation) {
+        // 从url的parameters中取"{method}.invocationid.autoattach" 或者 "invocationid.autoattach" 对应的value值
         String value = url.getMethodParameter(invocation.getMethodName(), Constants.AUTO_ATTACH_INVOCATIONID_KEY);
         if (value == null) {
             // add invocationid in async operation by default
+            // 异步操作，默认需要添加invocationid
             return isAsync(url, invocation);
         } else if (Boolean.TRUE.toString().equalsIgnoreCase(value)) {
             return true;
@@ -135,13 +140,16 @@ public class RpcUtils {
         }
     }
 
+    // 返回入参invocation对象的methodName属性值 或者 返回入参invocation对象所描述的方法的第一个参数变量的值
     public static String getMethodName(Invocation invocation) {
         if (Constants.$INVOKE.equals(invocation.getMethodName())
                 && invocation.getArguments() != null
                 && invocation.getArguments().length > 0
                 && invocation.getArguments()[0] instanceof String) {
+            // 若入参invocation的methodName属性值是"$invoke" 且 方法有参数 且 方法的第一个变量是String类型， 则返回方法第一个变量的值
             return (String) invocation.getArguments()[0];
         }
+        // 返回入参invocation的methodName属性值
         return invocation.getMethodName();
     }
 
@@ -173,17 +181,21 @@ public class RpcUtils {
         return invocation.getParameterTypes();
     }
 
+    // 根据入参url和inv的参数 来返回isAsync的值
+    // 判断是否异步，true 异步
     public static boolean isAsync(URL url, Invocation inv) {
         boolean isAsync;
+        // 若Invocation对象的attachments中，key="async"对应的值为true, 表示异步带回调
         if (Boolean.TRUE.toString().equals(inv.getAttachment(Constants.ASYNC_KEY))) {
             isAsync = true;
         } else {
+            // 从url的parameters中取key="async"对应的值，默认值为false
             isAsync = url.getMethodParameter(getMethodName(inv), Constants.ASYNC_KEY, false);
         }
         return isAsync;
     }
 
-    // 判断入参inv的"future_returntype"属性是否为true
+    // 判断入参Invocation对象的"future_returntype"属性是否为true
     public static boolean isReturnTypeFuture(Invocation inv) {
         return Boolean.TRUE.toString().equals(inv.getAttachment(Constants.FUTURE_RETURNTYPE_KEY));
     }
@@ -192,11 +204,14 @@ public class RpcUtils {
         return CompletableFuture.class.isAssignableFrom(method.getReturnType());
     }
 
+    // 根据入参url和inv的参数 来返回isOneway的值
     public static boolean isOneway(URL url, Invocation inv) {
         boolean isOneway;
         if (Boolean.FALSE.toString().equals(inv.getAttachment(Constants.RETURN_KEY))) {
+            // 若Invocation对象的attachments中，key="return"对应的值为false，则表示不需要返回值
             isOneway = true;
         } else {
+            // 从url的parameters中取key="return"对应的值，默认值为true
             isOneway = !url.getMethodParameter(getMethodName(inv), Constants.RETURN_KEY, true);
         }
         return isOneway;

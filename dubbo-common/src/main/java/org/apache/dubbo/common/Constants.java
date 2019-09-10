@@ -168,6 +168,7 @@ public class Constants {
 
     public static final int DEFAULT_HEARTBEAT = 60 * 1000;
 
+    // 默认超时时间，单位毫秒
     public static final int DEFAULT_TIMEOUT = 1000;
 
     public static final int DEFAULT_CONNECT_TIMEOUT = 3000;

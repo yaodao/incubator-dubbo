@@ -48,17 +48,20 @@ public class RpcInvocation implements Invocation, Serializable {
     // 存放的是服务的接口、版本信息
     private Map<String, String> attachments;
 
+    // 与当前Invocation对应的Invoker对象
     private transient Invoker<?> invoker;
 
     public RpcInvocation() {
     }
 
-    // 从入参中取值，用来初始化当前对象的属性值
+    // 从入参invocation中取值，用来初始化当前对象的主要属性
+    // 从入参invoker中取值，给当前对象的attachments属性添加entry
     public RpcInvocation(Invocation invocation, Invoker<?> invoker) {
         // 给当前对象的成员变量赋值
         this(invocation.getMethodName(), invocation.getParameterTypes(),
                 invocation.getArguments(), new HashMap<String, String>(invocation.getAttachments()),
                 invocation.getInvoker());
+        // 从invoker的url属性中取值，给当前对象的attachments属性添加entry
         if (invoker != null) {
             URL url = invoker.getUrl();
             // 从url中取值
@@ -202,6 +205,7 @@ public class RpcInvocation implements Invocation, Serializable {
             return;
         }
         for (Map.Entry<String, String> entry : attachments.entrySet()) {
+            // 若key存在，则不添加，否则， 添加
             setAttachmentIfAbsent(entry.getKey(), entry.getValue());
         }
     }
