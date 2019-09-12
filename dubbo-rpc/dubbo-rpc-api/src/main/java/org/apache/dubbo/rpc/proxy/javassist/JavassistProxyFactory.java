@@ -31,12 +31,17 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
 
     @Override
     @SuppressWarnings("unchecked")
+    // 返回实现了interfaces接口的类的实例对象
     public <T> T getProxy(Invoker<T> invoker, Class<?>[] interfaces) {
+        // 生成 Proxy的实现类对象。
+        // 调用该实现类对象的 newInstance 方法创建 proxy0的实例 。（proxy0是动态生成的实现了interfaces接口的类，见Proxy.java）
+        // 返回proxy0的实例
         return (T) Proxy.getProxy(interfaces).newInstance(new InvokerInvocationHandler(invoker));
     }
 
     @Override
     // proxy是接口的实现类的对象，type是接口 （proxy是type的子类）
+    // 返回一个Invoker的子类对象，该invoker对象可以通过proxy的包装类来调用proxy的方法。
     public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
         // TODO Wrapper cannot handle this scenario correctly: the classname contains '$'
         // 获取动态生成的proxy或者type 的包装类对象

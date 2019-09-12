@@ -682,6 +682,7 @@ public final class StringUtils {
         return sb.toString();
     }
 
+    // 将入参col1中的元素使用split连接在一起，并返回连接后的串
     public static String join(Collection<String> coll, String split) {
         if (CollectionUtils.isEmpty(coll)) {
             return EMPTY;

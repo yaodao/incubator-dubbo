@@ -29,6 +29,7 @@ import java.lang.reflect.Method;
 /**
  * InvokerHandler
  */
+// 所有代理对象（proxy0）的handler均为InvokerInvocationHandler类型
 public class InvokerInvocationHandler implements InvocationHandler {
     private static final Logger logger = LoggerFactory.getLogger(InvokerInvocationHandler.class);
     private final Invoker<?> invoker;
@@ -57,9 +58,13 @@ public class InvokerInvocationHandler implements InvocationHandler {
         return invoker.invoke(createInvocation(method, args)).recreate();
     }
 
+    // 生成一个RpcInvocation对象，并给它成员变量赋值
     private RpcInvocation createInvocation(Method method, Object[] args) {
+        // 生成一个RpcInvocation对象，并给它成员变量赋值
         RpcInvocation invocation = new RpcInvocation(method, args);
+        // method的返回值是否为CompletableFuture类型
         if (RpcUtils.hasFutureReturnType(method)) {
+            // invocation对象的attachments中添加（"future_returntype"，"true"），（"async"，"true"）
             invocation.setAttachment(Constants.FUTURE_RETURNTYPE_KEY, "true");
             invocation.setAttachment(Constants.ASYNC_KEY, "true");
         }

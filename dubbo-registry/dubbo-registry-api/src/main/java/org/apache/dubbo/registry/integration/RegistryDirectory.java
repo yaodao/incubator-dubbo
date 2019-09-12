@@ -132,6 +132,7 @@ public class RegistryDirectory<T> extends AbstractDirectory<T> implements Notify
         // save any parameter in registry that will be useful to the new url.
         String isDefault = url.getParameter(Constants.DEFAULT_KEY);
         if (StringUtils.isNotEmpty(isDefault)) {
+            // queryMap中添加（"registry.default"，"{isDefault}"）
             queryMap.put(Constants.REGISTRY_KEY + "." + Constants.DEFAULT_KEY, isDefault);
         }
         return URLBuilder.from(url)

@@ -293,7 +293,9 @@ public abstract class AbstractConfig implements Serializable {
         }
     }
 
+    // 由入参methodConfig对象生成一个AsyncMethodInfo对象
     protected static ConsumerMethodModel.AsyncMethodInfo convertMethodConfig2AyncInfo(MethodConfig methodConfig) {
+        // 校验methodConfig的字段是否为空
         if (methodConfig == null || (methodConfig.getOninvoke() == null && methodConfig.getOnreturn() == null && methodConfig.getOnthrow() == null)) {
             return null;
         }
@@ -303,6 +305,7 @@ public abstract class AbstractConfig implements Serializable {
             throw new IllegalStateException("method config error : return attribute must be set true when onreturn or onthrow has been set.");
         }
 
+        // 生成AsyncMethodInfo对象，并设置其字段值
         ConsumerMethodModel.AsyncMethodInfo asyncMethodInfo = new ConsumerMethodModel.AsyncMethodInfo();
 
         asyncMethodInfo.setOninvokeInstance(methodConfig.getOninvoke());

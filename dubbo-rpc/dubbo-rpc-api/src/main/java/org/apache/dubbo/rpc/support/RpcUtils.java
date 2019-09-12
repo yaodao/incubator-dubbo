@@ -106,7 +106,7 @@ public class RpcUtils {
         return null;
     }
 
-    // 从Invocation对象的attachments中获取"id"属性值
+    // 从Invocation对象的attachments中获取"id"属性值，有则返回值，没有返回null
     public static Long getInvocationId(Invocation inv) {
         String id = inv.getAttachment(Constants.ID_KEY);
         return id == null ? null : new Long(id);
@@ -125,7 +125,8 @@ public class RpcUtils {
         }
     }
 
-    // 是否需要添加invocationid，true 需要
+    // 根据入参url和invocation的属性， 判断是否需要添加invocationid。
+    // 返回true 表示需要
     private static boolean isAttachInvocationId(URL url, Invocation invocation) {
         // 从url的parameters中取"{method}.invocationid.autoattach" 或者 "invocationid.autoattach" 对应的value值
         String value = url.getMethodParameter(invocation.getMethodName(), Constants.AUTO_ATTACH_INVOCATIONID_KEY);
@@ -200,6 +201,7 @@ public class RpcUtils {
         return Boolean.TRUE.toString().equals(inv.getAttachment(Constants.FUTURE_RETURNTYPE_KEY));
     }
 
+    // CompletableFuture是否为method的返回值的父类/接口或者同类
     public static boolean hasFutureReturnType(Method method) {
         return CompletableFuture.class.isAssignableFrom(method.getReturnType());
     }

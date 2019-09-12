@@ -28,6 +28,9 @@ import java.util.List;
  * <p>
  * <a href="http://en.wikipedia.org/wiki/Directory_service">Directory Service</a>
  *
+ *
+ * Directory代表多个Invoker，可以把它看成List<Invoker>，但与List不同的是，它的值可能是动态变化的，比如注册中心推送变更。
+ * Cluster将Directory中的多个Invoker伪装成一个Invoker，对上层透明，伪装过程包含了容错逻辑，调用失败后，重试另一个。
  * @see org.apache.dubbo.rpc.cluster.Cluster#join(Directory)
  */
 public interface Directory<T> extends Node {
@@ -37,6 +40,7 @@ public interface Directory<T> extends Node {
      *
      * @return service type.
      */
+    // 获取服务接口
     Class<T> getInterface();
 
     /**
@@ -44,6 +48,7 @@ public interface Directory<T> extends Node {
      *
      * @return invokers
      */
+    // invoker列表，服务的列表
     List<Invoker<T>> list(Invocation invocation) throws RpcException;
 
 }

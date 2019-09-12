@@ -60,6 +60,7 @@ public final class ClassGenerator {
     private Set<String> mInterfaces;
     private List<String> mFields;
     private List<String> mConstructors;
+    // 存放整个方法的字符串，每个元素代表一个完整的方法
     private List<String> mMethods;
     private Map<String, Method> mCopyMethods; // <method desc,method instance>
     private Map<String, Constructor<?>> mCopyConstructors; // <constructor desc,constructor instance>
@@ -86,6 +87,7 @@ public final class ClassGenerator {
         return ClassGenerator.DC.class.isAssignableFrom(cl);
     }
 
+    // 返回缓存中的ClassPool对象 或者默认的ClassPool对象
     public static ClassPool getClassPool(ClassLoader loader) {
         if (loader == null) {
             return ClassPool.getDefault();
@@ -100,6 +102,8 @@ public final class ClassGenerator {
         return pool;
     }
 
+    // 通过入参mod的值，将修饰符追加到返回值末尾
+    // （注意：一个mod值，可以代表多个修饰符，即 可以返回 "public static"形式的串）
     private static String modifier(int mod) {
         StringBuilder modifier = new StringBuilder();
         if (Modifier.isPublic(mod)) {
@@ -177,6 +181,7 @@ public final class ClassGenerator {
         return addField(sb.toString());
     }
 
+    // 入参添加到成员变量mMethods中
     public ClassGenerator addMethod(String code) {
         if (mMethods == null) {
             mMethods = new ArrayList<String>();
@@ -185,14 +190,37 @@ public final class ClassGenerator {
         return this;
     }
 
+    // 使用入参，生成一个方法的完整字符串， 之后将该字符串加入成员变量mMethods
     public ClassGenerator addMethod(String name, int mod, Class<?> rt, Class<?>[] pts, String body) {
         return addMethod(name, mod, rt, pts, null, body);
     }
 
+    /**
+     * 根据提供的入参，会生成一个方法的完整字符串， 之后将该字符串加入成员变量mMethods
+     * 举例如下：
+     *
+     *     public java.lang.String sayHello(java.lang.String arg0) {
+     *         Object[] args = new Object[1];
+     *         args[0] = ($w) $1;
+     *         Object ret = handler.invoke(this, methods[0], args);
+     *         return (java.lang.String) ret;
+     *     }
+     *
+     * @param name 方法名
+     * @param mod 访问修饰符
+     * @param rt 返回类型clazz
+     * @param pts 参数clazz列表
+     * @param ets 方法抛出的异常clazz列表
+     * @param body 方法体
+     * @return 当前ClassGenerator对象
+     */
     public ClassGenerator addMethod(String name, int mod, Class<?> rt, Class<?>[] pts, Class<?>[] ets,
                                     String body) {
         StringBuilder sb = new StringBuilder();
+        // 生成方法的头， 形如： "public static java.lang.String fun1"
         sb.append(modifier(mod)).append(' ').append(ReflectUtils.getName(rt)).append(' ').append(name);
+
+        // 若方法有多个参数，则生成字符串形如 "(java.lang.String arg0, java.lang.Integer arg1)"
         sb.append('(');
         for (int i = 0; i < pts.length; i++) {
             if (i > 0) {
@@ -202,6 +230,8 @@ public final class ClassGenerator {
             sb.append(" arg").append(i);
         }
         sb.append(')');
+
+        // 若方法可以抛出多个异常，则生成字符串形如 "throws NotFoundException, IOException"
         if (ArrayUtils.isNotEmpty(ets)) {
             sb.append(" throws ");
             for (int i = 0; i < ets.length; i++) {
@@ -211,7 +241,10 @@ public final class ClassGenerator {
                 sb.append(ReflectUtils.getName(ets[i]));
             }
         }
+
+        // 包含方法体的字符串 "{" + body + "}"
         sb.append('{').append(body).append('}');
+        // 添加一个方法字符串到成员变量mMethods中
         return addMethod(sb.toString());
     }
 

@@ -29,16 +29,19 @@ import static org.apache.dubbo.common.Constants.PROPERTIES_CHAR_SEPERATOR;
  *
  * @export
  */
+// 元数据中心
 public class MetadataReportConfig extends AbstractConfig {
 
     private static final long serialVersionUID = 55233L;
     /**
      * the value is : metadata-report
      */
+    // 得到串"metadata-report"
     private static final String PREFIX_TAG = StringUtils.camelToSplitName(
             MetadataReportConfig.class.getSimpleName().substring(0, MetadataReportConfig.class.getSimpleName().length() - 6), PROPERTIES_CHAR_SEPERATOR);
 
     // Register center address
+    // 注册中心地址
     private String address;
 
     // Username to login register center

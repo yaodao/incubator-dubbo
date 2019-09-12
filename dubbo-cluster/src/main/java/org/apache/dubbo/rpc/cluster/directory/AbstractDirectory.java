@@ -41,10 +41,12 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
     // logger
     private static final Logger logger = LoggerFactory.getLogger(AbstractDirectory.class);
 
+    // 服务url
     private final URL url;
 
     private volatile boolean destroyed = false;
 
+    // 消费者url
     private volatile URL consumerUrl;
 
     protected RouterChain<T> routerChain;

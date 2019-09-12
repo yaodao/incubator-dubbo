@@ -10,10 +10,8 @@ import sun.reflect.annotation.AnnotationType;
 
 import java.io.File;
 import java.lang.annotation.Annotation;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Parameter;
+import java.lang.ref.Reference;
+import java.lang.reflect.*;
 import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -227,21 +225,22 @@ public class Test {
 //        System.out.println(os);
 //    }
 
-//    public static void main(String[] args) {
-//        System.out.println(ExecutorService.class.getName());
-//
-//        Package pkg = String.class.getPackage();
-//        String version = pkg.getImplementationVersion();
-//        System.out.println(version);
-//        String version2 = pkg.getSpecificationVersion();
-//        System.out.println(version2);
-//        System.out.println(System.getProperty("java.class.path"));
-//        String tem = Test.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+    public static void main(String[] args) {
+        System.out.println(ExecutorService.class.getName());
+
+        Package pkg = String.class.getPackage();
+        System.out.println(pkg.getName());
+        String version = pkg.getImplementationVersion();
+        System.out.println(version);
+        String version2 = pkg.getSpecificationVersion();
+        System.out.println(version2);
+        System.out.println(System.getProperty("java.class.path"));
+        String tem = Test.class.getProtectionDomain().getCodeSource().getLocation().getPath();
 //        URL url =  Test.class.getProtectionDomain().getCodeSource().getLocation();
-//        System.out.println(tem);
-//
-//        System.out.println(System.getProperty("user.home"));
-//    }
+        System.out.println(tem);
+
+        System.out.println(System.getProperty("user.home"));
+    }
 
 //    public static void main(String[] args) {
 //        String filename = "D:\\testimg\\aa\\bb\\cc\\aabbcc.txt";
@@ -493,37 +492,65 @@ public class Test {
 //        System.out.println(obj2.bb);
 //    }
 
-    public void fun1(){
-        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> "Hello");
-        future.completeExceptionally(new Exception());
-        try {
-            System.out.println(future.get());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            System.out.println("hehe");
-            e.printStackTrace();
-        }
-    }
+//    public void fun1(){
+//        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> "Hello");
+//        future.completeExceptionally(new Exception());
+//        try {
+//            System.out.println(future.get());
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        } catch (ExecutionException e) {
+//            System.out.println("hehe");
+//            e.printStackTrace();
+//        }
+//    }
+//
+//    public void fun2() throws InterruptedException {
+//        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> "Hello");
+////        Thread.sleep(1000);
+//        future.complete("World");
+//        Thread.sleep(2000);
+//        try {
+//            System.out.println(future.get());
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        } catch (ExecutionException e) {
+//            e.printStackTrace();
+//        }
+//    }
+//
+//
+//    public static void main(String[] args) throws InterruptedException {
+//        Test obj = new Test();
+//        obj.fun2();
+//
+//        Method [] arr = Test.class.getMethods();
+//        Arrays.stream(arr).forEach(elem-> System.out.println(elem));
+//    }
 
-    public void fun2() throws InterruptedException {
-        CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> "Hello");
-//        Thread.sleep(1000);
-        future.complete("World");
-        Thread.sleep(2000);
-        try {
-            System.out.println(future.get());
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-    public static void main(String[] args) throws InterruptedException {
-        Test obj = new Test();
-        obj.fun2();
-    }
-
+//    static class BB{
+//
+//    }
+//
+//    public static void fun(){
+//
+//    }
+//    public static void main(String[] args) throws NoSuchMethodException {
+//        Object bb = new BB();
+//        Object value = "aa";
+//        if (bb instanceof Reference<?>){
+//            System.out.println("heheh");
+//        }else{
+//            System.out.println("aa");
+//        }
+////        Class tem = Integer.TYPE;
+//        Class tem = int.class;
+//        System.out.println(Integer.TYPE.isPrimitive());
+//        System.out.println(tem.isPrimitive());
+//
+//        System.out.println("========================");
+//        Method mm = Test.class.getMethod("fun",null);
+//        System.out.println(Modifier.isPublic(mm.getModifiers()));
+//        System.out.println(Modifier.isStatic(mm.getModifiers()));
+//    }
 }

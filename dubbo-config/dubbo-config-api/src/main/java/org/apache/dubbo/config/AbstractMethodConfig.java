@@ -68,7 +68,7 @@ public abstract class AbstractMethodConfig extends AbstractConfig {
      * note that: the mock doesn't support on the provider side，and the mock is executed when a non-business exception
      * occurs after a remote service call
      */
-    // 当服务失败时，需要调用的类。感觉是服务降级的作用
+    // 类的全名，当服务失败时，需要调用的类。感觉是服务降级的作用
     protected String mock;
 
     /**

@@ -38,34 +38,44 @@ public class ClusterUtils {
         Map<String, String> remoteMap = remoteUrl.getParameters();
 
         if (remoteMap != null && remoteMap.size() > 0) {
+            // 将入参remoteUrl中的parameters添加到map
             map.putAll(remoteMap);
 
             // Remove configurations from provider, some items should be affected by provider.
+            // 移除参数 "threadname" ，"default.threadname"
             map.remove(Constants.THREAD_NAME_KEY);
             map.remove(Constants.DEFAULT_KEY_PREFIX + Constants.THREAD_NAME_KEY);
 
+            // 移除参数 "threadpool" ，"default.threadpool"
             map.remove(Constants.THREADPOOL_KEY);
             map.remove(Constants.DEFAULT_KEY_PREFIX + Constants.THREADPOOL_KEY);
 
+            // 移除参数 "corethreads" ，"default.corethreads"
             map.remove(Constants.CORE_THREADS_KEY);
             map.remove(Constants.DEFAULT_KEY_PREFIX + Constants.CORE_THREADS_KEY);
 
+            // 移除参数 "threads" ，"default.threads"
             map.remove(Constants.THREADS_KEY);
             map.remove(Constants.DEFAULT_KEY_PREFIX + Constants.THREADS_KEY);
 
+            // 移除参数 "queues" ，"default.queues"
             map.remove(Constants.QUEUES_KEY);
             map.remove(Constants.DEFAULT_KEY_PREFIX + Constants.QUEUES_KEY);
 
+            // 移除参数 "alive" ，"default.alive"
             map.remove(Constants.ALIVE_KEY);
             map.remove(Constants.DEFAULT_KEY_PREFIX + Constants.ALIVE_KEY);
 
+            // 移除参数 "transporter" ，"default.transporter"
             map.remove(Constants.TRANSPORTER_KEY);
             map.remove(Constants.DEFAULT_KEY_PREFIX + Constants.TRANSPORTER_KEY);
 
+            // 移除参数 "async" ，"default.async"
             map.remove(Constants.ASYNC_KEY);
             map.remove(Constants.DEFAULT_KEY_PREFIX + Constants.ASYNC_KEY);
 
             // remove method async entry.
+            // 移除map中以".async"结尾的key
             Set<String> methodAsyncKey = new HashSet<>();
             for (String key : map.keySet()) {
                 if (key != null && key.endsWith("." + Constants.ASYNC_KEY)) {

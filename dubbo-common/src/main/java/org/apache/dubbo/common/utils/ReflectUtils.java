@@ -678,6 +678,7 @@ public final class ReflectUtils {
         return sb.toString();
     }
 
+    // 由name得到该name对应的clazz
     public static Class<?> forName(String name) {
         try {
             return name2class(name);

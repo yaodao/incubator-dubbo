@@ -169,6 +169,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * Check whether the registry config is exists, and then conversion it to {@link RegistryConfig}
      */
     protected void checkRegistry() {
+        // 获取代表注册中心配置的RegistryConfig对象， 填充成员变量registries
         loadRegistriesFromBackwardConfig();
 
         convertRegistryIdsToRegistries();
@@ -208,6 +209,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
+    // 检验当前对象的成员变量monitor是否为空，若为空则创建MonitorConfig对象赋值给它
     protected void checkMonitor() {
         createMonitorIfAbsent();
         if (!monitor.isValid()) {
@@ -216,7 +218,8 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         }
     }
 
-    // 若成员变量monitor为空，则创建MonitorConfig对象赋值给它
+    // 若当前对象的成员变量monitor为空，则创建MonitorConfig对象赋值给它
+    // 若当前对象的成员变量monitor不为空，则直接返回
     private void createMonitorIfAbsent() {
         if (this.monitor != null) {
             return;
@@ -376,7 +379,9 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param registryURL
      * @return
      */
+    // 使用当前对象的monitor属性，构造一个url返回
     protected URL loadMonitor(URL registryURL) {
+        // 保证当前对象的monitor属性有值
         checkMonitor();
         Map<String, String> map = new HashMap<String, String>();
         // 新增entry("interface", "org.apache.dubbo.monitor.MonitorService")
@@ -393,25 +398,33 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         appendParameters(map, monitor);
         appendParameters(map, application);
         String address = monitor.getAddress();
+        // 从环境变量中取地址
         String sysaddress = System.getProperty("dubbo.monitor.address");
         if (sysaddress != null && sysaddress.length() > 0) {
             address = sysaddress;
         }
         if (ConfigUtils.isNotEmpty(address)) {
-            // map中没有key="protocol"
+            // map中没有key="protocol"对应的entry
             if (!map.containsKey(Constants.PROTOCOL_KEY)) {
+                // MonitorFactory接口是否有别名为"logstat"的实现类
                 if (getExtensionLoader(MonitorFactory.class).hasExtension(Constants.LOGSTAT_PROTOCOL)) {
+                    // map中添加（"protocol"，"logstat"）
                     map.put(Constants.PROTOCOL_KEY, Constants.LOGSTAT_PROTOCOL);
                 } else {
+                    // map中添加（"protocol"，"dubbo"）
                     map.put(Constants.PROTOCOL_KEY, Constants.DUBBO_PROTOCOL);
                 }
             }
+            // 生成url返回
             return UrlUtils.parseURL(address, map);
         } // monitor对象的protocol属性值="registry" 且 registryURL不为空
         else if (Constants.REGISTRY_PROTOCOL.equals(monitor.getProtocol()) && registryURL != null) {
             return URLBuilder.from(registryURL)
+                    // 设置url的protocal属性值为"dubbo"
                     .setProtocol(Constants.DUBBO_PROTOCOL)
+                    // url的parameters中增加entry（"protocol"，"registry"）
                     .addParameter(Constants.PROTOCOL_KEY, Constants.REGISTRY_PROTOCOL)
+                    // url的parameters中增加entry（"refer"，***）
                     .addParameterAndEncoded(Constants.REFER_KEY, StringUtils.toQueryString(map))
                     .build();
         }
@@ -499,12 +512,13 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param interfaceClass for provider side, it is the {@link Class} of the service that will be exported; for consumer
      *                       side, it is the {@link Class} of the remote service interface that will be referenced
      */
-    // 检验成员变量mock的值是否合法
+    // 检验成员变量mock的值是否合法， 不合法则抛出异常
+    // （mock是否为可解析的值  或者 mock是否为异常类的全名 或者 mock是否是interfaceClass的子类。 根据mock的值 三选一的校验）
     void checkMock(Class<?> interfaceClass) {
         if (ConfigUtils.isEmpty(mock)) {
             return;
         }
-
+        // 标准化mock串
         String normalizedMock = MockInvoker.normalizeMock(mock);
         // 若normalizedMock以"return "开头
         if (normalizedMock.startsWith(Constants.RETURN_PREFIX)) {
@@ -512,7 +526,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             normalizedMock = normalizedMock.substring(Constants.RETURN_PREFIX.length()).trim();
             try {
                 //Check whether the mock value is legal, if it is illegal, throw exception
-                // 验证normalizedMock是否合法
+                // 解析入参normalizedMock 成为一个值
                 MockInvoker.parseMockValue(normalizedMock);
             } catch (Exception e) {
                 throw new IllegalStateException("Illegal mock return in <dubbo:service/reference ... " +
@@ -525,7 +539,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             if (ConfigUtils.isNotEmpty(normalizedMock)) {
                 try {
                     //Check whether the mock value is legal
-                    // 由异常类的名字，得到异常类的对象
+                    // 校验normalizedMock是否为异常类的名字（这里用到的是这个作用）
                     MockInvoker.getThrowable(normalizedMock);
                 } catch (Exception e) {
                     throw new IllegalStateException("Illegal mock throw in <dubbo:service/reference ... " +
@@ -534,7 +548,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             }
         } else {
             //Check whether the mock class is a implementation of the interfaceClass, and if it has a default constructor
-            // 校验normalizedMock是interfaceClass的子类或者同类
+            // 校验normalizedMock是interfaceClass的子类或者同类 （这里用到的是这个作用）
             MockInvoker.getMockObject(normalizedMock, interfaceClass);
         }
     }
@@ -545,14 +559,19 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param interfaceClass for provider side, it is the {@link Class} of the service that will be exported; for consumer
      *                       side, it is the {@link Class} of the remote service interface
      */
-    // 检验成员变量local、stub 与 入参interfaceClass之间的关系是否合法，不合法则抛出异常
+    // 加载"{local}" 和 "{stub}" 类的clazz，并验证该clazz是否为入参interfaceClass的子类，不是则抛出异常
     void checkStubAndLocal(Class<?> interfaceClass) {
         if (ConfigUtils.isNotEmpty(local)) {
+            // 加载"{local}" 或者 "{interfaceClass}Local" 类的clazz
             Class<?> localClass = ConfigUtils.isDefault(local) ?
                     ReflectUtils.forName(interfaceClass.getName() + "Local") : ReflectUtils.forName(local);
+            // 校验入参interfaceClass是否为localClass的父类或同类，
+            // 检验入参localClass对象中，是否有参数类型为interfaceClass的构造函数
+            // 其中任一个不满足，则抛出异常
             verify(interfaceClass, localClass);
         }
         if (ConfigUtils.isNotEmpty(stub)) {
+            // 加载"{stub}" 或者 "{interfaceClass}Stub" 类的clazz
             Class<?> localClass = ConfigUtils.isDefault(stub) ?
                     ReflectUtils.forName(interfaceClass.getName() + "Stub") : ReflectUtils.forName(stub);
             verify(interfaceClass, localClass);
@@ -619,7 +638,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             String[] ids = Constants.COMMA_SPLIT_PATTERN.split(registryIds);
             List<RegistryConfig> tmpRegistries = CollectionUtils.isNotEmpty(registries) ? registries : new ArrayList<>();
             Arrays.stream(ids).forEach(id -> {
-                // 若registries中没有该id的RegistryConfig对象 且 ConfigManager中也没有，
+                // 若registries中没有该id的RegistryConfig对象 且 ConfigManager中也没有该id的RegistryConfig对象，
                 // 则new一个RegistryConfig对象添加到tmpRegistries中
                 if (tmpRegistries.stream().noneMatch(reg -> reg.getId().equals(id))) {
                     tmpRegistries.add(ConfigManager.getInstance().getRegistry(id).orElseGet(() -> {

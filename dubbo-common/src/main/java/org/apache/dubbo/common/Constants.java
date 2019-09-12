@@ -464,6 +464,7 @@ public class Constants {
 
     public static final String SEMICOLON_SEPARATOR = ";";
 
+    // 匹配 "空格;空格"
     public static final Pattern SEMICOLON_SPLIT_PATTERN = Pattern
             .compile("\\s*[;]+\\s*");
 

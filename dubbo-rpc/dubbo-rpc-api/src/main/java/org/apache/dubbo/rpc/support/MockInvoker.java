@@ -52,7 +52,7 @@ final public class MockInvoker<T> implements Invoker<T> {
         this.url = url;
     }
 
-    // 解析入参mock
+    // 解析入参mock，返回mock所代表的值
     public static Object parseMockValue(String mock) throws Exception {
         return parseMockValue(mock, null);
     }
@@ -85,7 +85,7 @@ final public class MockInvoker<T> implements Invoker<T> {
         } else {
             value = mock;
         }
-        // 若入参returnTypes数组 不为空，则认为returnTypes[0]是要目标类型， returnTypes[1]是泛型信息。
+        // 若入参returnTypes数组 不为空，则认为returnTypes[0]是目标类型， returnTypes[1]是泛型信息。
         if (ArrayUtils.isNotEmpty(returnTypes)) {
             // 将value转成returnTypes[0]类型的对象
             value = PojoUtils.realize(value, (Class<?>) returnTypes[0], returnTypes.length > 1 ? returnTypes[1] : null);
@@ -154,6 +154,7 @@ final public class MockInvoker<T> implements Invoker<T> {
             // 由name得到该name对应的clazz对象
             Class<?> bizException = ReflectUtils.forName(throwstr);
             Constructor<?> constructor;
+            // 获取bizException的带一个参数的构造函数
             constructor = ReflectUtils.findConstructor(bizException, String.class);
             t = (Throwable) constructor.newInstance(new Object[]{"mocked exception for service degradation."});
             if (throwables.size() < 1000) {
@@ -182,7 +183,12 @@ final public class MockInvoker<T> implements Invoker<T> {
     }
 
     @SuppressWarnings("unchecked")
-    // 返回mockService类型的对象，入参mockService是个类名字
+    /**
+     * 由入参mockService得到clazz，再通过clazz得到一个该类的对象
+     * @param mockService 类全名 或者 "true" 或者 "default"
+     * @param serviceType  mockClass的父类/接口
+     * @return
+     */
     public static Object getMockObject(String mockService, Class serviceType) {
         if (ConfigUtils.isDefault(mockService)) {
             // mockService值是 "true"或者"default"
@@ -220,7 +226,8 @@ final public class MockInvoker<T> implements Invoker<T> {
      * @param mock mock string
      * @return normalized mock string
      */
-    // mock串转成另一个串，能转的串如上注释所示
+    // 将入参mock串转成另一个串，需要转的串如注释中的列表所示，
+    // 不在上面列表中的串，直接返回，不用转
     public static String normalizeMock(String mock) {
         if (mock == null) {
             return mock;

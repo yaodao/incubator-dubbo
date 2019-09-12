@@ -24,7 +24,7 @@ import java.util.Map;
 
 /**
  * RegistryConfig
- * 暂时认为这是注册中心的配置
+ * 注册中心的配置
  * @export
  */
 public class RegistryConfig extends AbstractConfig {
@@ -55,6 +55,7 @@ public class RegistryConfig extends AbstractConfig {
     /**
      * Protocol for register center
      */
+    // 注册中心使用的协议
     private String protocol;
 
     /**
@@ -404,7 +405,7 @@ public class RegistryConfig extends AbstractConfig {
         if (!isValid()) {
             return false;
         }
-        // 当前对象的成员变量protocol="zookeeper" 或者 address以"zookeeper"开头，返回true
+        // 若当前对象的成员变量protocol="zookeeper" 或者 address以"zookeeper"开头，返回true
         return Constants.ZOOKEEPER_PROTOCOL.equals(getProtocol())
                 || getAddress().startsWith(Constants.ZOOKEEPER_PROTOCOL);
     }

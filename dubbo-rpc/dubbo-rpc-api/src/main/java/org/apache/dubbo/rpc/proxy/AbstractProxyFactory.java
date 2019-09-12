@@ -38,23 +38,34 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
     @Override
     public <T> T getProxy(Invoker<T> invoker, boolean generic) throws RpcException {
         Class<?>[] interfaces = null;
+        // 填充interfaces这个数组
+
+        // 获取url的parameters中key="interfaces"对应的value值
         String config = invoker.getUrl().getParameter(Constants.INTERFACES);
         if (config != null && config.length() > 0) {
+            // 用逗号隔开的多个接口全名
             String[] types = Constants.COMMA_SPLIT_PATTERN.split(config);
             if (types != null && types.length > 0) {
                 interfaces = new Class<?>[types.length + 2];
+                // 默认添加该invoker对象所代表的接口的clazz 和 EchoService.class
                 interfaces[0] = invoker.getInterface();
                 interfaces[1] = EchoService.class;
+                // 将types中的clazz 添加到interfaces数组中
                 for (int i = 0; i < types.length; i++) {
                     // TODO can we load successfully for a different classloader?.
                     interfaces[i + 2] = ReflectUtils.forName(types[i]);
                 }
             }
         }
+
+        // 若上面url中没有取到值 ，默认添加该invoker对象所代表的接口的clazz 和 EchoService.class
         if (interfaces == null) {
             interfaces = new Class<?>[]{invoker.getInterface(), EchoService.class};
         }
 
+        // 为 http 和 hessian 协议提供泛化调用支持
+        // 若该invoker对象所代表的接口的clazz 是 GenericService.class的子类 且 generic=true
+        // 则将GenericService.class也加到interfaces数组中
         if (!GenericService.class.isAssignableFrom(invoker.getInterface()) && generic) {
             int len = interfaces.length;
             Class<?>[] temp = interfaces;
@@ -62,6 +73,8 @@ public abstract class AbstractProxyFactory implements ProxyFactory {
             System.arraycopy(temp, 0, interfaces, 0, len);
             interfaces[len] = com.alibaba.dubbo.rpc.service.GenericService.class;
         }
+        // 从上面得到， interfaces数组中包括 invoker对象所表示的接口， url中的interfaces属性的值
+        // 前面代码作用就是填充interfaces这个数组，这里再用这个数组
 
         return getProxy(invoker, interfaces);
     }
