@@ -40,25 +40,33 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
     public static final int DEFAULT_PORT = 0;
     private static InjvmProtocol INSTANCE;
 
+    // 反射newInstance()时，会调用这个函数，这时赋值给INSTANCE
     public InjvmProtocol() {
         INSTANCE = this;
     }
 
+    // 返回InjvmProtocol对象
     public static InjvmProtocol getInjvmProtocol() {
         if (INSTANCE == null) {
+            // 反射生成InjvmProtocol.class的实例对象（这里应该是重试）
             ExtensionLoader.getExtensionLoader(Protocol.class).getExtension(InjvmProtocol.NAME); // load
         }
         return INSTANCE;
     }
 
+    // 返回入参key对应的Exporter对象，若没有则返回null
     static Exporter<?> getExporter(Map<String, Exporter<?>> map, URL key) {
         Exporter<?> result = null;
 
+        // 若由key的属性拼接成的串 "{group}/{interfaceName}:{version}" 中不包含"*"
         if (!key.getServiceKey().contains("*")) {
+            // 从map中取该串对应的Exporter对象
             result = map.get(key.getServiceKey());
         } else {
+            // 串中包含"*"
             if (CollectionUtils.isNotEmptyMap(map)) {
                 for (Exporter<?> exporter : map.values()) {
+                    // 比较key和exporter中 "interface", "group", "version" 这三项的值是否相同
                     if (UrlUtils.isServiceKeyMatch(key, exporter.getInvoker().getUrl())) {
                         result = exporter;
                         break;
@@ -69,7 +77,8 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
 
         if (result == null) {
             return null;
-        } else if (ProtocolUtils.isGeneric(
+        } // 若"generic"是"true" 或者是 "nativejava" 或者是 "bean" 则进if
+        else if (ProtocolUtils.isGeneric(
                 result.getInvoker().getUrl().getParameter(Constants.GENERIC_KEY))) {
             return null;
         } else {
@@ -91,9 +100,20 @@ public class InjvmProtocol extends AbstractProtocol implements Protocol {
 
     @Override
     public <T> Invoker<T> refer(Class<T> serviceType, URL url) throws RpcException {
+        // 生成一个InjvmInvoker对象，并给它的成员变量赋值
         return new InjvmInvoker<T>(serviceType, url, url.getServiceKey(), exporterMap);
     }
 
+    /**
+     * 根据url的parameters集合判断是否为本地引用。
+     *      取入参url的parameters集合中的"scope"属性值，
+     *          若scope="local" 或者 injvm=true，则返回true；
+     *          若scope="remote"，则返回false；
+     *      若url的parameters集合中的"generic"属性值为true，则返回false
+     *      若当前对象的成员变量exporterMap中，有url对应的Exporter对象，则返回true
+     * @param url
+     * @return
+     */
     public boolean isInjvmRefer(URL url) {
         // 取url的"scope"值
         String scope = url.getParameter(Constants.SCOPE_KEY);

@@ -36,6 +36,8 @@ class InjvmInvoker<T> extends AbstractInvoker<T> {
 
     private final Map<String, Exporter<?>> exporterMap;
 
+    // 生成一个InjvmInvoker对象，
+    // 并给当前对象的type，url，key，exporterMap成员变量赋值
     InjvmInvoker(Class<T> type, URL url, String key, Map<String, Exporter<?>> exporterMap) {
         super(type, url);
         this.key = key;

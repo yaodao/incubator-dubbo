@@ -187,10 +187,11 @@ public class ConfigManager {
     }
 
     public Optional<ConsumerConfig> getDefaultConsumer() {
+        // 从consumers中取key="default"对应的值
         return Optional.ofNullable(consumers.get(DEFAULT_KEY));
     }
 
-    // 把参数consumerConfig添加到成员变量consumers中
+    // 把（consumerConfig.getId()，consumerConfig）这个entry添加到成员变量consumers中
     public void addConsumer(ConsumerConfig consumerConfig) {
         if (consumerConfig == null) {
             return;
@@ -333,6 +334,7 @@ public class ConfigManager {
         return consumers;
     }
 
+    // 更新当前对象的所有成员变量的属性值
     public void refreshAll() {
         // refresh all configs here,
         getApplication().ifPresent(ApplicationConfig::refresh);

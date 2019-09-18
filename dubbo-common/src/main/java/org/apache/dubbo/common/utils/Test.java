@@ -225,22 +225,22 @@ public class Test {
 //        System.out.println(os);
 //    }
 
-    public static void main(String[] args) {
-        System.out.println(ExecutorService.class.getName());
-
-        Package pkg = String.class.getPackage();
-        System.out.println(pkg.getName());
-        String version = pkg.getImplementationVersion();
-        System.out.println(version);
-        String version2 = pkg.getSpecificationVersion();
-        System.out.println(version2);
-        System.out.println(System.getProperty("java.class.path"));
-        String tem = Test.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-//        URL url =  Test.class.getProtectionDomain().getCodeSource().getLocation();
-        System.out.println(tem);
-
-        System.out.println(System.getProperty("user.home"));
-    }
+//    public static void main(String[] args) {
+//        System.out.println(ExecutorService.class.getName());
+//
+//        Package pkg = String.class.getPackage();
+//        System.out.println(pkg.getName());
+//        String version = pkg.getImplementationVersion();
+//        System.out.println(version);
+//        String version2 = pkg.getSpecificationVersion();
+//        System.out.println(version2);
+//        System.out.println(System.getProperty("java.class.path"));
+//        String tem = Test.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+////        URL url =  Test.class.getProtectionDomain().getCodeSource().getLocation();
+//        System.out.println(tem);
+//
+//        System.out.println(System.getProperty("user.home"));
+//    }
 
 //    public static void main(String[] args) {
 //        String filename = "D:\\testimg\\aa\\bb\\cc\\aabbcc.txt";
@@ -553,4 +553,29 @@ public class Test {
 //        System.out.println(Modifier.isPublic(mm.getModifiers()));
 //        System.out.println(Modifier.isStatic(mm.getModifiers()));
 //    }
+
+//    public static void main(String[] args) {
+////        List<String> arr = new ArrayList<>();
+////        arr.add("aa");
+////        arr.add("bb");
+////        System.out.println(arr);
+////        List<String> arr2 = new ArrayList<>();
+////        arr2.add("cc");
+////        arr2.add("dd");
+////        arr.addAll(0,arr2);
+////        System.out.println(arr);
+////        arr2.add("ee");
+////        arr2.add("ff");
+////        arr.addAll(0,arr2);
+////        System.out.println(arr);
+////    }
+
+    public static void main(String[] args) {
+        String a = new String("hhh");
+        String b = new String("hhh");
+        System.out.println(System.identityHashCode(a));
+        System.out.println(System.identityHashCode(b));
+        System.out.println(a.hashCode());
+        System.out.println(b.hashCode());
+    }
 }

@@ -75,13 +75,18 @@ public class RpcStatus {
      * @param methodName
      * @return status
      */
+    // 返回methodName对应的RpcStatus对象，没有则新建一个返回。
     public static RpcStatus getStatus(URL url, String methodName) {
+        // url串
         String uri = url.toIdentityString();
+        // 成员变量METHOD_STATISTICS中有url对应的map，则获取该map，没有则新建一个
         ConcurrentMap<String, RpcStatus> map = METHOD_STATISTICS.get(uri);
         if (map == null) {
             METHOD_STATISTICS.putIfAbsent(uri, new ConcurrentHashMap<String, RpcStatus>());
             map = METHOD_STATISTICS.get(uri);
         }
+
+        // map中有methodName对应的RpcStatus对象，则获取该RpcStatus对象，没有则新建一个
         RpcStatus status = map.get(methodName);
         if (status == null) {
             map.putIfAbsent(methodName, new RpcStatus());

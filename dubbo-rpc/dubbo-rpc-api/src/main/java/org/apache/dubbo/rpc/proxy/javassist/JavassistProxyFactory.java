@@ -41,7 +41,7 @@ public class JavassistProxyFactory extends AbstractProxyFactory {
 
     @Override
     // proxy是接口的实现类的对象，type是接口 （proxy是type的子类）
-    // 返回一个Invoker的子类对象，该invoker对象可以通过proxy的包装类来调用proxy的方法。
+    // 返回一个Invoker的子类对象，该invoker子类对象的内部可以通过proxy的包装类来调用proxy的方法。
     public <T> Invoker<T> getInvoker(T proxy, Class<T> type, URL url) {
         // TODO Wrapper cannot handle this scenario correctly: the classname contains '$'
         // 获取动态生成的proxy或者type 的包装类对象

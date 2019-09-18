@@ -25,7 +25,13 @@ import org.apache.dubbo.common.Node;
  * @see org.apache.dubbo.rpc.InvokerListener
  * @see org.apache.dubbo.rpc.protocol.AbstractInvoker
  */
-// 执行器接口
+
+/**
+ * Invoker 是 Dubbo 的核心模型，代表一个可执行体。
+ * 在服务提供方，Invoker 用于调用服务提供类。
+ * 在服务消费方，Invoker 用于执行远程调用。
+ */
+// 执行器接口，一个invoker对象对应一个对外的接口服务
 public interface Invoker<T> extends Node {
 
     /**

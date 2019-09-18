@@ -174,6 +174,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
 
         convertRegistryIdsToRegistries();
 
+        // 校验registries中的对象
         for (RegistryConfig registryConfig : registries) {
             if (!registryConfig.isValid()) {
                 throw new IllegalStateException("No registry config found or it's not a valid config! " +
@@ -198,12 +199,16 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         ApplicationModel.setApplication(application.getName());
 
         // backward compatibility
+        // 取"dubbo.service.shutdown.wait"对应的配置值
         String wait = ConfigUtils.getProperty(Constants.SHUTDOWN_WAIT_KEY);
         if (wait != null && wait.trim().length() > 0) {
+            // 设置系统变量"dubbo.service.shutdown.wait"
             System.setProperty(Constants.SHUTDOWN_WAIT_KEY, wait.trim());
         } else {
+            // 取"dubbo.service.shutdown.wait.seconds"对应的配置值
             wait = ConfigUtils.getProperty(Constants.SHUTDOWN_WAIT_SECONDS_KEY);
             if (wait != null && wait.trim().length() > 0) {
+                // 设置系统变量"dubbo.service.shutdown.wait.seconds"
                 System.setProperty(Constants.SHUTDOWN_WAIT_SECONDS_KEY, wait.trim());
             }
         }
@@ -225,7 +230,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             return;
         }
         ConfigManager configManager = ConfigManager.getInstance();
-        // 给当前对象的monitor属性赋值 （使用新生成的MonitorConfig对象）
+        // 给当前对象的monitor属性赋值 （使用新生成的MonitorConfig对象 或者 使用configManager对象的monitor属性）
         setMonitor(
                 configManager
                         .getMonitor()
@@ -237,6 +242,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
         );
     }
 
+    // 若当前对象的metadataReportConfig为空，则新建一个
     protected void checkMetadataReport() {
         // TODO get from ConfigManager first, only create if absent.
         if (metadataReportConfig == null) {
@@ -379,7 +385,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param registryURL
      * @return
      */
-    // 使用当前对象的monitor属性，构造一个url返回
+    // 使用当前对象的monitor成员变量内的属性，构造一个url返回
     protected URL loadMonitor(URL registryURL) {
         // 保证当前对象的monitor属性有值
         checkMonitor();
@@ -417,7 +423,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
             }
             // 生成url返回
             return UrlUtils.parseURL(address, map);
-        } // monitor对象的protocol属性值="registry" 且 registryURL不为空
+        } // monitor对象的protocol属性值="registry" 且 入参registryURL不为空
         else if (Constants.REGISTRY_PROTOCOL.equals(monitor.getProtocol()) && registryURL != null) {
             return URLBuilder.from(registryURL)
                     // 设置url的protocal属性值为"dubbo"
@@ -559,7 +565,8 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @param interfaceClass for provider side, it is the {@link Class} of the service that will be exported; for consumer
      *                       side, it is the {@link Class} of the remote service interface
      */
-    // 加载"{local}" 和 "{stub}" 类的clazz，并验证该clazz是否为入参interfaceClass的子类，不是则抛出异常
+    // 加载"{local}" 和 "{stub}" 所描述的类的clazz，并验证该clazz是否为入参interfaceClass的子类，不是则抛出异常
+    // 其中，"{local}" 和 "{stub}" 分别表示成员变量local和stub的值
     void checkStubAndLocal(Class<?> interfaceClass) {
         if (ConfigUtils.isNotEmpty(local)) {
             // 加载"{local}" 或者 "{interfaceClass}Local" 类的clazz

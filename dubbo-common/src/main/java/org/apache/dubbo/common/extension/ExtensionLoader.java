@@ -238,8 +238,9 @@ public class ExtensionLoader<T> {
      * @see #getActivateExtension(org.apache.dubbo.common.URL, String[], String)
      */
 
-    // 在所有的使用@Activate标注的类中，要指定的group 外加 使用key 指定的扩展
+    // 在所有的使用@Activate标注的类中，返回value名字对应的扩展
     public List<T> getActivateExtension(URL url, String key, String group) {
+        // 先用key从 url对象中得到value值
         String value = url.getParameter(key);
         return getActivateExtension(url, StringUtils.isEmpty(value) ? null : Constants.COMMA_SPLIT_PATTERN.split(value), group);
     }
@@ -256,20 +257,29 @@ public class ExtensionLoader<T> {
 
 
     /**
-     * 获取当前type接口的所有可自动激活的实现类的对象 (可自动激活的实现类就是带@Activate注解的那些实现类)
+     * 获取当前type接口的所有可自动激活的实现类的对象 (可自动激活的实现类就是带@Activate注解的那些实现类)，
+     * （注意： 并不是把type类型的所有自动激活的实现类都返回。
+     * 入参values中指定的类的对象肯定会返回，
+     * 其他的type的实现类，就看该类的@Activate注解内的值和入参url是否匹配，匹配则返回）
      *
+     * 当入参values和group都为空时，会返回那些和入参url匹配的实现类的对象的集合
+     * （匹配规则是： 实现类的@Activate注解的value值 与url对象的parameters属性中的某个key相等，就算匹配）
      *
      * @param url 举例: URL url = URL.valueOf("test://localhost/test");
-     * @param values 要加载的那些类的别名(文件中的名字)
+     * @param values 要加载的类的别名(文件中的名字)
      * @param group 举例: group="group1", group="consumer"
      * @return
      */
     public List<T> getActivateExtension(URL url, String[] values, String group) {
         List<T> exts = new ArrayList<>();
+        // 若入参values是空，则给names赋一个空数组
+        // 别名集合
         List<String> names = values == null ? new ArrayList<>(0) : Arrays.asList(values);
-        // 如果names中没有"-default",则加载所有的Activates扩展(但不包括names内的那些扩展)
+        // 如果names中没有"-default",则加载所有的Activates扩展
+        // names数组中已有的元素会在下段代码中处理，这段代码只处理names数组中没有的元素。
         if (!names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
             // 加载type接口的所有带@Activate注解的实现类，填充到成员变量cachedActivates中 (type是带@SPI的任意接口)
+            // 这个过程中会填充当前对象的成员变量cachedActivates, key是name（类的别名）, value是@Activate注解自身
             getExtensionClasses();
             for (Map.Entry<String, Object> entry : cachedActivates.entrySet()) {
                 // name就是文件中的类别名
@@ -278,10 +288,10 @@ public class ExtensionLoader<T> {
 
                 String[] activateGroup, activateValue;
 
+                // 获取@Activate注解中的group和value值,
+                // 例如: @Activate("cache, validation"), value()值就是"cache, validation"
                 if (activate instanceof Activate) {
                     activateGroup = ((Activate) activate).group();
-                    // 就是@Activate注解的value值,
-                    // 例如: @Activate("cache, validation"), value()值就是"cache, validation"
                     activateValue = ((Activate) activate).value();
                 } else if (activate instanceof com.alibaba.dubbo.common.extension.Activate) {
                     activateGroup = ((com.alibaba.dubbo.common.extension.Activate) activate).group();
@@ -289,16 +299,15 @@ public class ExtensionLoader<T> {
                 } else {
                     continue;
                 }
-                // 参数group在@Activate注解的group()值中
+                // 判断activateGroup是否包含参数group
+                // 若包含 或者 group为空，进if
                 if (isMatchGroup(group, activateGroup)) {
                     T ext = getExtension(name);
                     if (!names.contains(name)
                             && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)
                             && isActive(activateValue, url)) {
-                        // 不在names指定的扩展中;并且names中没有指定移除该扩展(-name)，且当前url匹配结果显示可激活才能add到exts中
-                        // 参数values中不包含name 且 参数values中不包含-name 且 url的参数有activateValue的值
-                        // 才能add,
-                        // 例如 activateValue="cache, validation"时, 当url的参数中有"cache" 或者有 "validation"时,
+                        // names数组中没有该name元素;并且names数组中没有指定移除该扩展(-name)，且当前url匹配结果显示可激活才能add到exts中
+                        // 例如 activateValue=["cache, validation"], 当url的parameters中存在key="cache" 或者key="validation"时,
                         // 才能把该接口的实现类的对象ext添加到exts
                         exts.add(ext);
                     }
@@ -306,13 +315,18 @@ public class ExtensionLoader<T> {
             }
             exts.sort(ActivateComparator.COMPARATOR);
         }
-        // 获取names内的Activates扩展 (即 获取names中的元素对应的实现类的对象, 添加到exts中)
+
+        //  将names集合中的元素（类的别名）对应的类的对象, 添加到exts中（会过滤掉names集合中以"-"开头的元素）
         List<T> usrs = new ArrayList<>();
         for (int i = 0; i < names.size(); i++) {
             String name = names.get(i);
             // names中的"-name"元素, 不添加到exts中, 其余都添加到exts中
+
+            // 若name不以"-"开头，进if
             if (!name.startsWith(Constants.REMOVE_VALUE_PREFIX)
                     && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)) {
+
+                // 将names集合中的元素分成两部分，以值="default"的那个元素分开。
                 if (Constants.DEFAULT_KEY.equals(name)) {
                     if (!usrs.isEmpty()) {
                         // 配置在default之前的Activate扩展, 放到前面
@@ -320,6 +334,7 @@ public class ExtensionLoader<T> {
                         usrs.clear();
                     }
                 } else {
+                    //  获取name对应的类的对象，将该对象添加到usrs
                     T ext = getExtension(name);
                     usrs.add(ext);
                 }
@@ -347,7 +362,8 @@ public class ExtensionLoader<T> {
         return false;
     }
 
-    // url的?后面带的那些参数中, 只要有一个名字和入参keys中的元素相等, 就返回true, 入参keys为空直接返回true
+    // 入参keys数组中的元素，只要有一个和url对象的parameters属性中的key相等, 就返回true,（parameters中key对应的value值不能为空）
+    // 入参keys为空直接返回true
     private boolean isActive(String[] keys, URL url) {
         if (keys.length == 0) {
             return true;
@@ -356,7 +372,7 @@ public class ExtensionLoader<T> {
             for (Map.Entry<String, String> entry : url.getParameters().entrySet()) {
                 String k = entry.getKey();
                 String v = entry.getValue();
-                // k等于key或者以".key"结尾 且 v不为空, 则返回true
+                // （若k等于key 或者 k以".key"结尾 ）并且 v不为空, 则返回true
                 if ((k.equals(key) || k.endsWith("." + key))
                         && ConfigUtils.isNotEmpty(v)) {
                     return true;

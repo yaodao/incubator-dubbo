@@ -33,8 +33,16 @@ public class ClusterUtils {
     private ClusterUtils() {
     }
 
+    /**
+     * 将remoteUrl的parameters属性和localMap合并，并生成一个新的url对象 返回
+     * @param remoteUrl 服务提供者url
+     * @param localMap 服务消费者url的parameters属性
+     * @return
+     */
     public static URL mergeUrl(URL remoteUrl, Map<String, String> localMap) {
+        // 最后的结果map （就是最后返回的url的parameters属性值）
         Map<String, String> map = new HashMap<String, String>();
+        // 获取入参remoteUrl的parameters属性
         Map<String, String> remoteMap = remoteUrl.getParameters();
 
         if (remoteMap != null && remoteMap.size() > 0) {
@@ -87,13 +95,18 @@ public class ClusterUtils {
             }
         }
 
+        // 若入参localMap不为空，则将其元素添加到map中，但要保留map中"group"，"release"对应的原有值
         if (localMap != null && localMap.size() > 0) {
             // All providers come to here have been filtered by group, which means only those providers that have the exact same group value with the consumer could come to here.
             // So, generally, we don't need to care about the group value here.
             // But when comes to group merger, there is an exception, the consumer group may be '*' while the provider group can be empty or any other values.
+            // 取map中"group"，"release"对应的值
             String remoteGroup = map.get(Constants.GROUP_KEY);
             String remoteRelease = map.get(Constants.RELEASE_KEY);
+            // 把入参localMap中的值再添加到map中
             map.putAll(localMap);
+            // 上面这句可能把map中的"group"，"release"对应的值改变，
+            // 这里把map中"group"，"release"对应的原值再覆盖回去
             if (StringUtils.isNotEmpty(remoteGroup)) {
                 map.put(Constants.GROUP_KEY, remoteGroup);
             }
@@ -103,45 +116,58 @@ public class ClusterUtils {
                 map.put(Constants.RELEASE_KEY, remoteRelease);
             }
         }
+        // 若remoteMap不为空， 则从remoteMap中取值，添加到map中（这个感觉就是让map中属于remoteMap的那些元素不变）
         if (remoteMap != null && remoteMap.size() > 0) {
             // Use version passed from provider side
+            // 从remoteMap中取"dubbo"对应的值
             String dubbo = remoteMap.get(Constants.DUBBO_VERSION_KEY);
+            // 往map中添加（"dubbo"，"{dubbo}"）
             if (dubbo != null && dubbo.length() > 0) {
                 map.put(Constants.DUBBO_VERSION_KEY, dubbo);
             }
             String version = remoteMap.get(Constants.VERSION_KEY);
             if (version != null && version.length() > 0) {
+                // 往map中添加（"version"，"{version}"）
                 map.put(Constants.VERSION_KEY, version);
             }
             String methods = remoteMap.get(Constants.METHODS_KEY);
             if (methods != null && methods.length() > 0) {
+                // 往map中添加（"methods"，"{methods}"）
                 map.put(Constants.METHODS_KEY, methods);
             }
             // Reserve timestamp of provider url.
             String remoteTimestamp = remoteMap.get(Constants.TIMESTAMP_KEY);
             if (remoteTimestamp != null && remoteTimestamp.length() > 0) {
+                // 往map中添加（"remote.timestamp"，"{remoteTimestamp}"）
                 map.put(Constants.REMOTE_TIMESTAMP_KEY, remoteMap.get(Constants.TIMESTAMP_KEY));
             }
 
             // TODO, for compatibility consideration, we cannot simply change the value behind APPLICATION_KEY from Consumer to Provider. So just add an extra key here.
             // Reserve application name from provider.
+            // 往map中添加（"remote.application"，**）
             map.put(Constants.REMOTE_APPLICATION_KEY, remoteMap.get(Constants.APPLICATION_KEY));
 
             // Combine filters and listeners on Provider and Consumer
+            // 取remoteMap和localMap的"reference.filter"属性
             String remoteFilter = remoteMap.get(Constants.REFERENCE_FILTER_KEY);
             String localFilter = localMap.get(Constants.REFERENCE_FILTER_KEY);
             if (remoteFilter != null && remoteFilter.length() > 0
                     && localFilter != null && localFilter.length() > 0) {
+                // localMap中添加（"reference.filter"，"{remoteFilter},{localFilter}"）
                 localMap.put(Constants.REFERENCE_FILTER_KEY, remoteFilter + "," + localFilter);
             }
+
+            // 取remoteMap和localMap的"invoker.listener"属性
             String remoteListener = remoteMap.get(Constants.INVOKER_LISTENER_KEY);
             String localListener = localMap.get(Constants.INVOKER_LISTENER_KEY);
             if (remoteListener != null && remoteListener.length() > 0
                     && localListener != null && localListener.length() > 0) {
+                // localMap中添加（"invoker.listener"，"{remoteListener},{localListener}"）
                 localMap.put(Constants.INVOKER_LISTENER_KEY, remoteListener + "," + localListener);
             }
         }
 
+        // 生成一个新的url对象， 并将map赋值给该url对象的parameters属性
         return remoteUrl.clearParameters().addParameters(map);
     }
 
