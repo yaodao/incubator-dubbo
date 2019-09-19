@@ -1231,7 +1231,10 @@ class URL implements Serializable {
         return getParameter(key);
     }
 
+    // 将当前url中key为"protocol", "username", "password", "host", "port", "path" 对应的entry添加到map
+    // 将当前url对象的parameters属性添加到map，并返回map
     public Map<String, String> toMap() {
+        // 结果map
         Map<String, String> map = new HashMap<>(parameters);
         if (protocol != null) {
             map.put(Constants.PROTOCOL_KEY, protocol);
@@ -1240,7 +1243,7 @@ class URL implements Serializable {
             map.put(Constants.USERNAME_KEY, username);
         }
         if (password != null) {
-            map.put(Constants.USERNAME_KEY, password);
+            map.put(Constants.PASSWORD_KEY, password);
         }
         if (host != null) {
             map.put(Constants.HOST_KEY, host);

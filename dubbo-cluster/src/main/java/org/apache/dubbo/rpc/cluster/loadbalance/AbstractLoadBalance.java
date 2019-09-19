@@ -48,6 +48,7 @@ public abstract class AbstractLoadBalance implements LoadBalance {
     }
 
     @Override
+    // 根据一定的策略，选一个invoker出来（就是找一个服务提供者来处理请求）
     public <T> Invoker<T> select(List<Invoker<T>> invokers, URL url, Invocation invocation) {
         if (CollectionUtils.isEmpty(invokers)) {
             return null;
