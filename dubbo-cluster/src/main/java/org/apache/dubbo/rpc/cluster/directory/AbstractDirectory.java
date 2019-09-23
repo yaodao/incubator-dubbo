@@ -55,17 +55,28 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
         this(url, null);
     }
 
+    // 给AbstractDirectory类的成员变量赋值
     public AbstractDirectory(URL url, RouterChain<T> routerChain) {
         this(url, url, routerChain);
     }
 
+    // 给AbstractDirectory类的成员变量赋值
     public AbstractDirectory(URL url, URL consumerUrl, RouterChain<T> routerChain) {
         if (url == null) {
             throw new IllegalArgumentException("url == null");
         }
 
+        // 给当前对象的成员变量url赋值
+
+        // 若入参url的protocol属性值为"registry"，则更新入参url的parameters中的entry值
+        // （使用入参url的parameters中"refer"属性的值来更新）
         if (url.getProtocol().equals(Constants.REGISTRY_PROTOCOL)) {
+
+            // 取url的parameters中"refer"属性的值， 并将该属性值转成map
             Map<String, String> queryMap = StringUtils.parseQueryString(url.getParameterAndDecoded(Constants.REFER_KEY));
+
+            // 使用queryMap中的entry覆盖入参url对象的parameters中的entry
+            // 之后，构造新的URL对象赋值给成员变量url
             this.url = url.addParameters(queryMap).removeParameter(Constants.MONITOR_KEY);
         } else {
             this.url = url;
@@ -81,6 +92,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
             throw new RpcException("Directory already destroyed .url: " + getUrl());
         }
 
+        // 调用 doList 方法列举 Invoker，doList 是模板方法，由子类实现
         return doList(invocation);
     }
 
@@ -99,6 +111,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     protected void addRouters(List<Router> routers) {
         routers = routers == null ? Collections.emptyList() : routers;
+        // 把入参routers添加到routerChain对象的routers集合中
         routerChain.addRouters(routers);
     }
 

@@ -29,6 +29,7 @@ public class ConditionRouterFactory implements RouterFactory {
     public static final String NAME = "condition";
 
     @Override
+    // new一个ConditionRouter对象，并使用url的属性值，给它的成员变量赋值
     public Router getRouter(URL url) {
         return new ConditionRouter(url);
     }

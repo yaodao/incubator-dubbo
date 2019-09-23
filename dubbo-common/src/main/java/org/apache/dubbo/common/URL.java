@@ -1102,14 +1102,16 @@ class URL implements Serializable {
      * @param parameters parameters in key-value pairs
      * @return A new URL
      */
-    // 用参数map中的entry, 新增或替换原来的map中的entry值
+    // 用入参parameters中的entry, 新增或替换当前对象的parameters中的entry值
+    // 这类似于为当前对象的parameters属性，新增或者更新entry。
     public URL addParameters(Map<String, String> parameters) {
         if (CollectionUtils.isEmptyMap(parameters)) {
             return this;
         }
 
         boolean hasAndEqual = true;
-        // 判断参数map和该url自身的map的value值是否相同
+        // 判断入参parameters中的key对应的value值 和 当前对象的parameters中该key对应的value值 是否相同
+        // 若有一个不相同，设置hasAndEqual为false，跳出循环。
         for (Map.Entry<String, String> entry : parameters.entrySet()) {
             String value = getParameters().get(entry.getKey());
             if (value == null) {
@@ -1129,8 +1131,11 @@ class URL implements Serializable {
             return this;
         }
 
+        // 能到这，说明入参parameters和当前对象的parameters中，相同的key对应的value值不同。
+        // 或者入参parameters中有的key，在当前对象的parameters中没有。
+
         Map<String, String> map = new HashMap<>(getParameters());
-        // 添加到url的参数map中
+        // 使用入参parameters新增或者覆盖当前对象parameters中的entry
         map.putAll(parameters);
         return new URL(protocol, username, password, host, port, path, map);
     }

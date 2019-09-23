@@ -260,25 +260,30 @@ public class ExtensionLoader<T> {
      * 获取当前type接口的所有可自动激活的实现类的对象 (可自动激活的实现类就是带@Activate注解的那些实现类)，
      * （注意： 并不是把type类型的所有自动激活的实现类都返回。
      * 入参values中指定的类的对象肯定会返回，
-     * 其他的type的实现类，就看该类的@Activate注解内的值和入参url是否匹配，匹配则返回）
+     * 其他的type的实现类，就看该类的@Activate注解内的值和入参url的属性名是否匹配，匹配则返回）
      *
      * 当入参values和group都为空时，会返回那些和入参url匹配的实现类的对象的集合
      * （匹配规则是： 实现类的@Activate注解的value值 与url对象的parameters属性中的某个key相等，就算匹配）
      *
-     * @param url 举例: URL url = URL.valueOf("test://localhost/test");
+     * @param url  服务提供者url （暂时不能确定是服务提供者url还是消费者url）
      * @param values 要加载的类的别名(文件中的名字)
      * @param group 举例: group="group1", group="consumer"
      * @return
      */
     public List<T> getActivateExtension(URL url, String[] values, String group) {
+        // 返回结果，元素是type的带@Activate注解的实现类的对象
         List<T> exts = new ArrayList<>();
         // 若入参values是空，则给names赋一个空数组
         // 别名集合
         List<String> names = values == null ? new ArrayList<>(0) : Arrays.asList(values);
+
+        /**
+         *  这段if 处理的是names数组中没有的那些别名（names数组中有的别名在下段代码处理）
+         *  具体做法是：比较入参url的属性名 和 别名所代表的类的@Activate注解的value值，若两者相等，则将类对象存入exts
+         */
         // 如果names中没有"-default",则加载所有的Activates扩展
-        // names数组中已有的元素会在下段代码中处理，这段代码只处理names数组中没有的元素。
         if (!names.contains(Constants.REMOVE_VALUE_PREFIX + Constants.DEFAULT_KEY)) {
-            // 加载type接口的所有带@Activate注解的实现类，填充到成员变量cachedActivates中 (type是带@SPI的任意接口)
+            // 加载type接口的所有带@Activate注解的实现类 (type是带@SPI的任意接口)
             // 这个过程中会填充当前对象的成员变量cachedActivates, key是name（类的别名）, value是@Activate注解自身
             getExtensionClasses();
             for (Map.Entry<String, Object> entry : cachedActivates.entrySet()) {
@@ -292,6 +297,7 @@ public class ExtensionLoader<T> {
                 // 例如: @Activate("cache, validation"), value()值就是"cache, validation"
                 if (activate instanceof Activate) {
                     activateGroup = ((Activate) activate).group();
+                    // activateValue赋值为@Activate注解的value值
                     activateValue = ((Activate) activate).value();
                 } else if (activate instanceof com.alibaba.dubbo.common.extension.Activate) {
                     activateGroup = ((com.alibaba.dubbo.common.extension.Activate) activate).group();
@@ -299,16 +305,22 @@ public class ExtensionLoader<T> {
                 } else {
                     continue;
                 }
-                // 判断activateGroup是否包含参数group
-                // 若包含 或者 group为空，进if
+                // 若group为空，则进if
+                // 若group不为空，若activateGroup数组中有入参group的值，则进if
                 if (isMatchGroup(group, activateGroup)) {
+                    // 这里是使用别名取的实现类对象，而不是使用@Activate注解的value值
                     T ext = getExtension(name);
+
+                    /**
+                     * names数组中没有该name元素  且  names数组中没有指定移除该扩展(-name)  且  当前url匹配结果显示可激活才能add到exts中
+                     * 例如 activateValue=["cache, validation"], 当url的parameters中存在key="cache" 或者key="validation"时,
+                     * 才能把该接口的实现类的对象ext添加到exts
+                     */
                     if (!names.contains(name)
                             && !names.contains(Constants.REMOVE_VALUE_PREFIX + name)
                             && isActive(activateValue, url)) {
-                        // names数组中没有该name元素;并且names数组中没有指定移除该扩展(-name)，且当前url匹配结果显示可激活才能add到exts中
-                        // 例如 activateValue=["cache, validation"], 当url的parameters中存在key="cache" 或者key="validation"时,
-                        // 才能把该接口的实现类的对象ext添加到exts
+
+                        // ext添加到exts
                         exts.add(ext);
                     }
                 }
@@ -316,7 +328,12 @@ public class ExtensionLoader<T> {
             exts.sort(ActivateComparator.COMPARATOR);
         }
 
-        //  将names集合中的元素（类的别名）对应的类的对象, 添加到exts中（会过滤掉names集合中以"-"开头的元素）
+
+        /**
+         * names数组中已有的别名，在这里处理
+         *
+         * 将names集合中的元素（类的别名）对应的类的对象, 添加到exts中（会过滤掉names集合中以"-"开头的元素）
+         */
         List<T> usrs = new ArrayList<>();
         for (int i = 0; i < names.size(); i++) {
             String name = names.get(i);
@@ -347,7 +364,7 @@ public class ExtensionLoader<T> {
         return exts;
     }
 
-    // 数组groups是否包含group, true 包含, 若group为空 直接返回true
+    // 数组groups是否包含group值, true 包含, 若group为空 直接返回true
     private boolean isMatchGroup(String group, String[] groups) {
         if (StringUtils.isEmpty(group)) {
             return true;
@@ -370,9 +387,10 @@ public class ExtensionLoader<T> {
         }
         for (String key : keys) {
             for (Map.Entry<String, String> entry : url.getParameters().entrySet()) {
+                // k是 url中的属性名（具体是url对象的parameters集合中的key值）
                 String k = entry.getKey();
                 String v = entry.getValue();
-                // （若k等于key 或者 k以".key"结尾 ）并且 v不为空, 则返回true
+                // （k等于key 或者 k以".{key}"结尾 ） 且 v不为空, 则返回true
                 if ((k.equals(key) || k.endsWith("." + key))
                         && ConfigUtils.isNotEmpty(v)) {
                     return true;
@@ -480,7 +498,8 @@ public class ExtensionLoader<T> {
         return c != null;
     }
 
-    // 返回type接口的所有实现类的类别名集合（这句api说明写的很到位，返回的只是type接口的实现类的名字，不包括其它接口的实现类的名字）
+    // 返回type接口的所有实现类的类别名集合
+    // （这句api说明写的很到位，返回的只是type接口的实现类的名字，不包括其它接口的实现类的名字）
     public Set<String> getSupportedExtensions() {
         // 将文件中记录解析map (key是文件中的类别名, value是类对应的Class对象)
         Map<String, Class<?>> clazzes = getExtensionClasses();

@@ -88,6 +88,7 @@ public class ConditionRouter extends AbstractRouter {
         this.init(rule);
     }
 
+    // 生成一个ConditionRouter对象，并给它的成员变量赋值
     public ConditionRouter(URL url) {
         this.url = url;
         // 获取 priority 和 force 配置
@@ -253,8 +254,11 @@ public class ConditionRouter extends AbstractRouter {
     }
 
     @Override
-    // 为入参url选择一个服务提供者，并返回
-    // 入参url可以理解为服务消费者。
+    // 将消费者url，与服务消费者的规则进行匹配，
+    //      若能匹配上，则返回入参invokers中与服务提供者的规则匹配的那些Invoker
+    //      若不能匹配，则返回入参invokers
+
+    // 就是为消费者选出服务提供者的集合（就是有那些服务提供者，可以为这个消费者服务）。入参url为服务消费者url。
     public <T> List<Invoker<T>> route(List<Invoker<T>> invokers, URL url, Invocation invocation)
             throws RpcException {
         if (!enabled) {
@@ -285,7 +289,7 @@ public class ConditionRouter extends AbstractRouter {
                 logger.warn("The current consumer in the service blacklist. consumer: " + NetUtils.getLocalHost() + ", service: " + url.getServiceKey());
                 return result;
             }
-            // 从invokers集合中找 路由规则then指定的那些服务提供者，添加到result中
+            // 从invokers集合中找 匹配路由规则then的那些服务提供者，添加到result中
             for (Invoker<T> invoker : invokers) {
                 if (matchThen(invoker.getUrl(), url)) {
                     result.add(invoker);

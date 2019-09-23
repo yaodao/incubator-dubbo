@@ -36,6 +36,7 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
 
     private final List<Invoker<T>> invokers;
 
+    // 生成一个StaticDirectory对象
     public StaticDirectory(List<Invoker<T>> invokers) {
         this(null, invokers, null);
     }
@@ -48,8 +49,13 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
         this(url, invokers, null);
     }
 
+    // 生成一个StaticDirectory对象，并给它自己和它父类的成员变量赋值
     public StaticDirectory(URL url, List<Invoker<T>> invokers, RouterChain<T> routerChain) {
+        // 若入参url为空 且 入参invokers不空，则调用 super(invokers.get(0).getUrl(), routerChain)
+        // 其他情况调用super(url, routerChain)
         super(url == null && CollectionUtils.isNotEmpty(invokers) ? invokers.get(0).getUrl() : url, routerChain);
+
+        // 入参invokers为空，则抛出异常
         if (CollectionUtils.isEmpty(invokers)) {
             throw new IllegalArgumentException("invokers == null");
         }
@@ -62,11 +68,13 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
     }
 
     @Override
+    // 检测当前服务目录是否可用
     public boolean isAvailable() {
         if (isDestroyed()) {
             return false;
         }
         for (Invoker<T> invoker : invokers) {
+            // 只要有一个 Invoker 是可用的，就认为当前目录是可用的
             if (invoker.isAvailable()) {
                 return true;
             }
@@ -75,20 +83,28 @@ public class StaticDirectory<T> extends AbstractDirectory<T> {
     }
 
     @Override
+    // 销毁当前服务目录
     public void destroy() {
         if (isDestroyed()) {
             return;
         }
         super.destroy();
+        // 遍历 Invoker 列表，并执行相应的销毁逻辑
         for (Invoker<T> invoker : invokers) {
             invoker.destroy();
         }
+        // 清空当前服务目录的invokers集合
         invokers.clear();
     }
 
+    // 构造一个RouterChain对象， 设置到当前对象的routerChain属性中
     public void buildRouterChain() {
+        // 构造一个RouterChain对象
         RouterChain<T> routerChain = RouterChain.buildChain(getUrl());
+        // 给routerChain的invokers赋值
         routerChain.setInvokers(invokers);
+
+        // 将上面构造出的RouterChain对象， 赋给当前对象的routerChain属性
         this.setRouterChain(routerChain);
     }
 

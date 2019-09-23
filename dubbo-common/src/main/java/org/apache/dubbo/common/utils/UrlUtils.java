@@ -542,16 +542,22 @@ public class UrlUtils {
         return urls.stream().filter(predicate).collect(Collectors.toList());
     }
 
+    // 判断url的类别
+    // 若url对象的protocol属性值为"override"  或者  "category"属性值为"configurators" 返回true
     public static boolean isConfigurator(URL url) {
         return OVERRIDE_PROTOCOL.equals(url.getProtocol()) ||
                 CONFIGURATORS_CATEGORY.equals(url.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY));
     }
 
+    // 判断url的类别
+    // 若url对象的protocol属性值为"route"  或者  "category"属性值为"routers" 返回true
     public static boolean isRoute(URL url) {
         return ROUTE_PROTOCOL.equals(url.getProtocol()) ||
                 ROUTERS_CATEGORY.equals(url.getParameter(CATEGORY_KEY, DEFAULT_CATEGORY));
     }
 
+    // 判断url的类别
+    // 若url对象的protocol属性值不是"override"和"route"  且  "category"属性值是"providers" 返回true
     public static boolean isProvider(URL url) {
         return !OVERRIDE_PROTOCOL.equals(url.getProtocol()) &&
                 !ROUTE_PROTOCOL.equals(url.getProtocol()) &&
