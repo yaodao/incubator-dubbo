@@ -25,6 +25,7 @@ import org.apache.dubbo.rpc.cluster.Directory;
  * {@link FailoverClusterInvoker}
  *
  */
+// 失败自动切换
 public class FailoverCluster implements Cluster {
 
     public final static String NAME = "failover";

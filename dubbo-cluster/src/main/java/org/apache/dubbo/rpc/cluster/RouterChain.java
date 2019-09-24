@@ -126,6 +126,7 @@ public class RouterChain<T> {
     // 调用当前对象的路由集合中，每个路由对象的notify方法
     public void setInvokers(List<Invoker<T>> invokers) {
         this.invokers = (invokers == null ? Collections.emptyList() : invokers);
+        // 调用 Router 的 route 方法进行路由，过滤掉不符合路由规则的 Invoker
         routers.forEach(router -> router.notify(this.invokers));
     }
 }

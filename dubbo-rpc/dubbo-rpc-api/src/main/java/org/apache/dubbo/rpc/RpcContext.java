@@ -628,13 +628,16 @@ public class RpcContext {
         return invokers == null && invoker != null ? (List) Arrays.asList(invoker) : invokers;
     }
 
+    // 汇总入参invokers中每个元素的url属性，并赋值给当前对象的urls属性
     public RpcContext setInvokers(List<Invoker<?>> invokers) {
         this.invokers = invokers;
         if (CollectionUtils.isNotEmpty(invokers)) {
             List<URL> urls = new ArrayList<URL>(invokers.size());
+            // 从入参invokers中取每个元素的url属性，添加到urls
             for (Invoker<?> invoker : invokers) {
                 urls.add(invoker.getUrl());
             }
+            // 将urls赋值给当前对象的urls属性
             setUrls(urls);
         }
         return this;

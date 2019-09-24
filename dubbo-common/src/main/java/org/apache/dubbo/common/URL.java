@@ -785,7 +785,9 @@ class URL implements Serializable {
         return value;
     }
 
+    // 从当前对象的parameters中取"{key}"对应的value值，若为空，则返回默认值
     public String getMethodParameter(String method, String key, String defaultValue) {
+        // 先从parameters中取"{method}.{key}"对应的value值，若为空，再从parameters中取"{key}"对应的value值。
         String value = getMethodParameter(method, key);
         if (StringUtils.isEmpty(value)) {
             return defaultValue;
