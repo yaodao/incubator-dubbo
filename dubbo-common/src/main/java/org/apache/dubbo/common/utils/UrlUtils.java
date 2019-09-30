@@ -471,9 +471,21 @@ public class UrlUtils {
                 && (consumerClassifier == null || Constants.ANY_VALUE.equals(consumerClassifier) || StringUtils.isEquals(consumerClassifier, providerClassifier));
     }
 
-    // 判断value是否匹配pattern （支持pattern中的*通配符）
-    // 入参param的作用是，当入参pattern是一个key值时（以"$"开头的字符串，往往被看做是一个变量名，而不是一个具体的值）
-    // 所以，还需要取param中该key对应的value做pattern。 入参param是消费者url
+
+    /**
+     * 判断value是否匹配pattern （近似于判断value和pattern是否相等， 支持pattern中的*通配符）
+     *
+     * param的作用是，当pattern是一个key值时，即，以"$"开头的字符串。（以"$"开头的字符串,往往被看做是一个变量名，而不是一个具体的值）
+     * 需要从param中取该key对应的value做pattern。
+     *
+     * （一个疑问，从代码来看，入参pattern是解析路由规则得到的value值， 它若以"$"开头，就从消费者url中取具体值。
+     * 这意思就是说，路由规则中 以$开头的字符串， 它的具体值，可以由消费者url提供？？）
+     *
+     * @param pattern 模式串
+     * @param value 需要进行判断的串
+     * @param param 消费者url
+     * @return
+     */
     public static boolean isMatchGlobPattern(String pattern, String value, URL param) {
         // 若入参param不空 且 pattern串以"$"开头
         if (param != null && pattern.startsWith("$")) {
@@ -485,13 +497,20 @@ public class UrlUtils {
         return isMatchGlobPattern(pattern, value);
     }
 
-    // 判断value是否匹配pattern, 匹配返回true （支持pattern中的*通配符）
-    // 1、若pattern是"*" 返回true
-    // 2、若pattern和value都为空, 则返回true
-    // 3、若pattern和value只有一个为空, 则返回false
-    // 4、若pattern和value值相等，返回true
-    // 5、若pattern中包含"*", 则判断pattern中星前的字符 和星后的字符 是否是value的前缀和后缀 ，是则返回true
-    // (这就相当于把星号解析为任意多个字符)
+
+    /**
+     * 判断value是否匹配pattern, 匹配返回true （支持pattern中的*通配符）
+     * 1、若pattern是"*" 返回true
+     * 2、若pattern和value都为空, 则返回true
+     * 3、若pattern和value只有一个为空, 则返回false
+     * 4、若pattern和value值相等，返回true
+     * 5、若pattern中包含"*", 则判断pattern中星前的字符 和星后的字符 是否与value的前缀和后缀相等 ，相等则返回true，(这就相当于把星号解析为任意多个字符)
+     *
+     *
+     * @param pattern 模式串
+     * @param value 需要进行判断的串
+     * @return
+     */
     public static boolean isMatchGlobPattern(String pattern, String value) {
         if ("*".equals(pattern)) {
             return true;

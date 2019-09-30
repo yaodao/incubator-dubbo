@@ -141,13 +141,22 @@ public class RpcUtils {
         }
     }
 
-    // 返回入参invocation对象的methodName属性值 或者 返回入参invocation对象所描述的方法的第一个参数变量的值
+
+    /**
+     * 返回invocation对象的methodName属性值 或者 返回方法的第一个参数的值
+     * （这里的方法是指入参invocation对象所代表的那个方法。）
+     *
+     * @param invocation 含有单个方法的信息的对象
+     * @return
+     */
     public static String getMethodName(Invocation invocation) {
+        // 若入参invocation的methodName属性值是"$invoke"
+        // 且 方法有参数 且 方法的第一个参数的值是String类型， 则进if
         if (Constants.$INVOKE.equals(invocation.getMethodName())
                 && invocation.getArguments() != null
                 && invocation.getArguments().length > 0
                 && invocation.getArguments()[0] instanceof String) {
-            // 若入参invocation的methodName属性值是"$invoke" 且 方法有参数 且 方法的第一个变量是String类型， 则返回方法第一个变量的值
+            // 返回方法第一个参数的值
             return (String) invocation.getArguments()[0];
         }
         // 返回入参invocation的methodName属性值

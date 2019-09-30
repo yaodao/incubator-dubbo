@@ -52,12 +52,22 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
+    /**
+     * 使用invoker对象进行远程调用， 若调用失败则换一个invoker对象进行重试。
+     * （重试的次数从当前对象关联的Directory对象的url属性中取）
+     *
+     * @param invocation 单个方法的信息
+     * @param invokers 活着的服务提供者列表（invoker对象集合）
+     * @param loadbalance 负载均衡对象
+     * @return
+     * @throws RpcException
+     */
     public Result doInvoke(Invocation invocation, final List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         List<Invoker<T>> copyInvokers = invokers;
         checkInvokers(copyInvokers, invocation);
-        // 入参invocation对象代表的方法的名字
+        // 获取入参invocation对象代表的方法的名字
         String methodName = RpcUtils.getMethodName(invocation);
-        // 获取方法的重试次数
+        // 获取方法的重试次数（从当前对象关联的Directory对象的url属性中取）
         int len = getUrl().getMethodParameter(methodName, Constants.RETRIES_KEY, Constants.DEFAULT_RETRIES) + 1;
         if (len <= 0) {
             len = 1;
@@ -65,8 +75,9 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
         // retry loop.
         RpcException le = null; // last exception.
         List<Invoker<T>> invoked = new ArrayList<Invoker<T>>(copyInvokers.size()); // invoked invokers.
+        // 服务提供者host值的集合（只用于记录日志）
         Set<String> providers = new HashSet<String>(len);
-        // 循环调用，失败重试
+        // 循环调用，失败重试（重试是指挑选不同的invoker对象，进行远程调用）
         for (int i = 0; i < len; i++) {
             //Reselect before retry to avoid a change of candidate `invokers`.
             //NOTE: if `invokers` changed, then `invoked` also lose accuracy.
@@ -81,9 +92,18 @@ public class FailoverClusterInvoker<T> extends AbstractClusterInvoker<T> {
             }
             // 通过负载均衡选择 Invoker
             Invoker<T> invoker = select(loadbalance, invocation, copyInvokers, invoked);
+            /**
+             * 这里将上面选出来的invoker对象添加到invoked集合中，
+             * 这个invoked集合会在下次循环中，作为参数传入上面的select方法。
+             *
+             * 想一下，如果进行下一次循环就代表着本次取到的invoker对象不可用，
+             * 也就是这个invoked集合中，大概率存放着不可用的invoker对象集合（不排除有些invoker对象通过重启机器又好用了）
+             */
             invoked.add(invoker);
+            // 设置 invoked 到 RPC 上下文中
             RpcContext.getContext().setInvokers((List) invoked);
             try {
+                // 进行远程调用
                 Result result = invoker.invoke(invocation);
                 if (le != null && logger.isWarnEnabled()) {
                     logger.warn("Although retry the method " + methodName

@@ -188,7 +188,7 @@ public class RpcInvocation implements Invocation, Serializable {
         }
     }
 
-    // 将参数map中的entry添加到成员变量attachments中，覆盖已有值
+    // 将参数map中的entry添加到当前对象的成员变量attachments中，覆盖已有值
     public void addAttachments(Map<String, String> attachments) {
         if (attachments == null) {
             return;

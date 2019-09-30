@@ -34,6 +34,10 @@ import org.apache.dubbo.rpc.cluster.support.FailoverCluster;
  * 集群容错对于 Dubbo 框架来说，是很重要的逻辑。
  * 集群模块处于服务提供者和消费者之间，对于服务消费者来说，集群可向其屏蔽服务提供者集群的情况，使其能够专心进行远程调用。
  * 除此之外，通过集群模块，我们还可以对服务之间的调用链路进行编排优化，治理服务。
+ *
+ *
+ *  Cluster 接口和其实现类有什么用呢？用途比较简单，仅用于生成 Cluster Invoker，
+ *  例如：FailoverCluster类用于生成FailoverClusterInvoker类对象
  */
 @SPI(FailoverCluster.NAME)
 public interface Cluster {

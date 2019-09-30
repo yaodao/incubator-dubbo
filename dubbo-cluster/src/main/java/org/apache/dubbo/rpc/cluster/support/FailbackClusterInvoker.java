@@ -40,6 +40,9 @@ import java.util.concurrent.TimeUnit;
  * When fails, record failure requests and schedule for retry on a regular interval.
  * Especially useful for services of notification.
  *
+ * FailbackClusterInvoker 会在调用失败后，返回一个空结果给服务提供者。
+ * 并通过定时任务对失败的调用进行重传，适合执行消息通知等操作。
+ *
  * <a href="http://en.wikipedia.org/wiki/Failback">Failback</a>
  */
 public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
@@ -96,12 +99,14 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
     }
 
     @Override
-    // 选择一个Invoker对象，执行远程调用。
-    // 若远程调用失败，则通过 addFailed 方法给timer添加任务，定时重试。
+    /**
+     * 选择一个Invoker对象，执行远程调用。
+     * 若远程调用失败，则通过 addFailed 方法给timer添加任务，定时重试。
+     */
     protected Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         Invoker<T> invoker = null;
         try {
-            // 检查入参invokers是否为空，为空则log
+            // 检查入参invokers是否为空，为空则抛出异常
             checkInvokers(invokers, invocation);
             // 从入参invokers集合中， 通过负载均衡组件选择一个Invoker对象。
             invoker = select(loadbalance, invocation, invokers, null);
@@ -133,6 +138,7 @@ public class FailbackClusterInvoker<T> extends AbstractClusterInvoker<T> {
         private final Invocation invocation;
         private final LoadBalance loadbalance;
         private final List<Invoker<T>> invokers;
+        // 当前任务的重试次数，会在run方法中，根据这个值决定向timer中添加任务的次数。
         private final int retries;
         private final long tick;
         private Invoker<T> lastInvoker;

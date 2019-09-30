@@ -30,6 +30,7 @@ public class ConditionRouterFactory implements RouterFactory {
 
     @Override
     // new一个ConditionRouter对象，并使用url的属性值，给它的成员变量赋值
+    // 入参url对象满足 "protocol"属性值为"route"  或者  "category"属性值为"routers"
     public Router getRouter(URL url) {
         return new ConditionRouter(url);
     }

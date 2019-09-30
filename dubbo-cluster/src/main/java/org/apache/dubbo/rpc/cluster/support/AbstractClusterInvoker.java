@@ -42,6 +42,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * AbstractClusterInvoker
+ *
+ * Cluster Invoker 是一种 Invoker。
+ * 对服务提供者的选择逻辑，以及远程调用失败后的的处理逻辑均是封装在 Cluster Invoker 中
  */
 public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
 
@@ -117,15 +120,15 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
      * b) 重新选择， 被选出来的invoker对象有最小的概率来自于入参selected集合，并且保证这个被选出来的invoker对象可用。
      *
      *
-     * @param loadbalance load balance policy 负载均衡策略
-     * @param invocation  invocation
-     * @param invokers    invoker candidates 可选择的invoker集合
-     * @param selected    exclude selected invokers or not 已经选过的invoker集合
-     * @return the invoker which will final to do invoke. 返回一个invoker对象，用于调用
+     * @param loadbalance 具体的负载均衡策略
+     * @param invocation  单个方法的信息
+     * @param invokers    存活着的服务提供者列表
+     * @param selected    exclude selected invokers or not 已经使用过的invoker集合（大概率是不可用的invoker对象，参考调用处给出的注释，FailoverClusterInvoker类）
+     * @return 返回一个invoker对象，用于调用
      * @throws RpcException exception
      */
 
-    // 先看当前对象的成员变量stickyInvoker是否可用，若可用就直接返回该对象。 （stickyInvoker就是一个Invoker对象，相当于缓存）
+    // 先看当前对象的stickyInvoker是否可用，若可用就直接返回该对象。 （stickyInvoker就是一个Invoker对象，相当于缓存）
     // 否则，就从入参invokers集合中， 通过负载均衡组件选择一个Invoker对象返回。
     protected Invoker<T> select(LoadBalance loadbalance, Invocation invocation,
                                 List<Invoker<T>> invokers, List<Invoker<T>> selected) throws RpcException {
@@ -147,24 +150,30 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
             stickyInvoker = null;
         }
 
-        // 到这若stickyInvoker不为空，说明它代表的服务提供者还可用。
-        // stickyInvoker 对应的服务提供者可能因网络原因未能成功提供服务。
-        // 但是该提供者并没挂，因为此时 invokers 列表中仍存在该服务提供者对应的 Invoker。
+        // 到这，若stickyInvoker有值，说明它代表的服务提供者还可用。（stickyInvoker有值说明上面没给它赋空）
 
 
-        //ignore concurrency problem
         // 在 sticky 为 true，且 stickyInvoker != null 的情况下，若selected 不包含stickyInvoker，则进if
         if (sticky && stickyInvoker != null && (selected == null || !selected.contains(stickyInvoker))) {
 
+            // availablecheck 表示是否开启了可用性检查。
+            // 如果开启了，则调用 stickyInvoker 的isAvailable 方法进行检查，
+            // 如果检查通过，则直接返回 stickyInvoker。
             if (availablecheck && stickyInvoker.isAvailable()) {
-                // availablecheck 表示是否开启了可用性检查。
-                // 如果开启了，则调用 stickyInvoker 的isAvailable 方法进行检查，如果检查通过，则直接返回 stickyInvoker。
                 return stickyInvoker;
             }
         }
 
-        // 如果线程走到当前代码处，说明前面的 stickyInvoker 为空，或者不可用。
-        // 此时继续调用 doSelect 选择 Invoker
+
+        /**
+         * 能到这，说明 stickyInvoker 为空，或者不空 但selected包含stickyInvoker。
+         * 如果 selected 包含 stickyInvoker，表明 stickyInvoker 在此之前没有成功提供服务（可能因网络原因未能成功提供服务）
+         * （因为selected中大概率存放着不能提供服务的invoker对象）
+         * 但是该提供者并没挂,仍然处于存活状态，因为此时 invokers 列表中仍存在该服务提供者对应的 Invoker。
+         * 所以依然可以从selected集合中挑选invoker对象，  只要该invoker对象可用。
+         */
+
+        // 继续调用 doSelect 选择 Invoker （从invokers和selected中选一个可用的invoker）
         Invoker<T> invoker = doSelect(loadbalance, invocation, invokers, selected);
 
         // 如果 sticky 为 true，则将负载均衡组件选出的 Invoker 赋值给 stickyInvoker
@@ -189,6 +198,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
      *
      */
     // 从入参invokers集合中， 通过负载均衡组件选择一个Invoker对象，并返回该对象。
+    // 入参invokers集合中存放着当前可用的服务提供者。
     private Invoker<T> doSelect(LoadBalance loadbalance, Invocation invocation,
                                 List<Invoker<T>> invokers, List<Invoker<T>> selected) throws RpcException {
 
@@ -262,8 +272,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         List<Invoker<T>> reselectInvokers = new ArrayList<>(
                 invokers.size() > 1 ? (invokers.size() - 1) : invokers.size());
 
-        // First, try picking a invoker not in `selected`.
-        // 先选一个不在selected集合中的Invoker对象。添加到reselectInvokers集合中
+        // 将invokers中可用的 且 不在selected中的Invoker对象，都添加到reselectInvokers集合
         for (Invoker<T> invoker : invokers) {
             // 检测可用性
             if (availablecheck && !invoker.isAvailable()) {
@@ -301,11 +310,12 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
     }
 
     @Override
+    // 当服务消费者进行远程调用时，此时 AbstractClusterInvoker 的这个 invoke 方法会被调用。
     public Result invoke(final Invocation invocation) throws RpcException {
         checkWhetherDestroyed();
 
         // binding attachments into invocation.
-        // 绑定 attachments 到入参invocation对象中.
+        // 将RpcContext对象中的 attachments 添加到入参invocation对象中.
         Map<String, String> contextAttachments = RpcContext.getContext().getAttachments();
         if (contextAttachments != null && contextAttachments.size() != 0) {
             ((RpcInvocation) invocation).addAttachments(contextAttachments);
@@ -316,13 +326,14 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         // 加载LoadBalance接口的一个实现类对象
         LoadBalance loadbalance = initLoadBalance(invokers, invocation);
         RpcUtils.attachInvocationIdIfAsync(getUrl(), invocation);
-        // 调用 doInvoke 进行后续操作
+        // 调用子类的 doInvoke 进行后续操作
         return doInvoke(invocation, invokers, loadbalance);
     }
 
     protected void checkWhetherDestroyed() {
         // 当前对象是否被销毁
         if (destroyed.get()) {
+            // consumer使用的invoker对象已经被销毁，不能再调用
             throw new RpcException("Rpc cluster invoker for " + getInterface() + " on consumer " + NetUtils.getLocalHost()
                     + " use dubbo version " + Version.getVersion()
                     + " is now destroyed! Can not invoke any more.");
@@ -334,7 +345,7 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
         return getInterface() + " -> " + getUrl().toString();
     }
 
-    // 检查入参invokers是否为空，为空则log
+    // 检查入参invokers是否为空，为空则抛出异常
     // 入参invokers为空，表示没有服务提供者
     protected void checkInvokers(List<Invoker<T>> invokers, Invocation invocation) {
         if (CollectionUtils.isEmpty(invokers)) {
@@ -362,15 +373,22 @@ public abstract class AbstractClusterInvoker<T> implements Invoker<T> {
      * if invokes is empty, init a default LoadBalance(RandomLoadBalance)
      * </p>
      *
+     * 加载LoadBalance接口的一个实现类，并返回该类的对象
+     * 如果入参invokers列表不是空，则从它第一个元素的url对象中取要加载的实现类的别名，加载该类并返回该类的对象。
+     * 如果入参invokers列表为空，则直接加载别名是"random"的实现类，并返回该类的对象
+     *
      * @param invokers   invokers
      * @param invocation invocation
      * @return LoadBalance instance. if not need init, return null.
      */
-    // 加载LoadBalance接口的一个实现类的对象
+    // 加载LoadBalance接口的一个实现类，并返回该类的对象
     protected LoadBalance initLoadBalance(List<Invoker<T>> invokers, Invocation invocation) {
+
+        // 取类的别名，加载该类，返回该类的对象
+
         if (CollectionUtils.isNotEmpty(invokers)) {
             // 从url对象中取"loadbalance"属性的value值，默认值是"random"
-            // （其中，url对象是invokers集合的第一个元素的url属性值，value值就是要加载的实现类的别名）
+            // （其中，url对象是invokers集合的第一个元素的url属性，value值就是要加载的实现类的别名）
             return ExtensionLoader.getExtensionLoader(LoadBalance.class).getExtension(invokers.get(0).getUrl()
                     .getMethodParameter(RpcUtils.getMethodName(invocation), Constants.LOADBALANCE_KEY, Constants.DEFAULT_LOADBALANCE));
         } else {

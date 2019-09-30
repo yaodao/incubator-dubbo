@@ -32,8 +32,7 @@ import java.util.List;
  * BroadcastClusterInvoker
  *
  */
-// BroadcastClusterInvoker 会逐个调用每个服务提供者，如果其中一台报错，在循环调用结束后，BroadcastClusterInvoker 会抛出异常。
-// 该类通常用于通知所有提供者更新缓存或日志等本地资源信息
+
 public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(BroadcastClusterInvoker.class);
@@ -44,6 +43,10 @@ public class BroadcastClusterInvoker<T> extends AbstractClusterInvoker<T> {
 
     @Override
     @SuppressWarnings({"unchecked", "rawtypes"})
+    /**
+     * BroadcastClusterInvoker 会逐个调用每个服务提供者，如果其中一台报错，在循环调用结束后，BroadcastClusterInvoker 会抛出异常。
+     * 该类通常用于通知所有提供者更新缓存或日志等本地资源信息
+     */
     public Result doInvoke(final Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         checkInvokers(invokers, invocation);
         RpcContext.getContext().setInvokers((List) invokers);

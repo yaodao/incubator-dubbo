@@ -41,6 +41,9 @@ public class FailfastClusterInvoker<T> extends AbstractClusterInvoker<T> {
     }
 
     @Override
+    /**
+     * FailfastClusterInvoker 只会进行一次调用，失败后立即抛出异常。适用于幂等操作，比如新增记录
+     */
     public Result doInvoke(Invocation invocation, List<Invoker<T>> invokers, LoadBalance loadbalance) throws RpcException {
         checkInvokers(invokers, invocation);
         // 选择 Invoker

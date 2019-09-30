@@ -570,12 +570,87 @@ public class Test {
 ////        System.out.println(arr);
 ////    }
 
-    public static void main(String[] args) {
-        String a = new String("hhh");
-        String b = new String("hhh");
-        System.out.println(System.identityHashCode(a));
-        System.out.println(System.identityHashCode(b));
-        System.out.println(a.hashCode());
-        System.out.println(b.hashCode());
+//    public static void main(String[] args) {
+//        String a = new String("hhh");
+//        String b = new String("hhh");
+//        System.out.println(System.identityHashCode(a));
+//        System.out.println(System.identityHashCode(b));
+//        System.out.println(a.hashCode());
+//        System.out.println(b.hashCode());
+//    }
+
+//    public static void main(String[] args) {
+//        Pattern ROUTE_PATTERN = Pattern.compile("([&!=,]*)\\s*([^&!=,\\s]+)");
+//        String rule="host = 2.2.2.2 & host != 1.1.1.1 & method = hello";
+//        final Matcher matcher = ROUTE_PATTERN.matcher(rule);
+//
+//        while (matcher.find()){
+//            System.out.print(matcher.group(1));
+//            System.out.println("  "+matcher.group(2));
+//        }
+//    }
+
+//    public static void main(String[] args) throws Exception{
+//
+//        String regEx = "(\\d+)(df)*";
+//        String s = "123d";
+//        Pattern pat = Pattern.compile(regEx);
+//        Matcher mat = pat.matcher(s);
+//        while(mat.find()){
+//            System.out.println(mat.group(1));
+//            System.out.println(mat.group(2));
+//        }
+//    }
+
+
+    static class WeiXin extends Thread {
+        @Override
+        public void run() {
+            while (true) {
+                for (int i = 1; i <= 100; i++) {
+                    System.out.println("下载进度" + i + "%");
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
+    static class Task implements Runnable{
+
+        Thread tem;
+        public Task(Thread param){
+            this.tem = param;
+        }
+
+        @Override
+        public void run() {
+            tem.setDaemon(true);
+            tem.start();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            System.out.println("end of Task");
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        WeiXin weiXin = new WeiXin();
+//        weiXin.setDaemon(true);
+
+        Thread th1 = new Thread(new Task(weiXin));
+        th1.start();
+
+//        System.out.println(weiXin.isDaemon());
+//        weiXin.start();
+        Thread.sleep(3000);
+//        for (int i = 0; i <= 100; i++) {
+//            System.out.println(Thread.currentThread().getName() + i);
+//        }
     }
 }

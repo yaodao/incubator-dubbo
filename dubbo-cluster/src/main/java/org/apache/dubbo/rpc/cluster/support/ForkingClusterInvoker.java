@@ -44,6 +44,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * ForkingClusterInvoker 会在运行时通过线程池创建多个线程，并发调用多个服务提供者。
  * 只要有一个服务提供者成功返回了结果，doInvoke 方法就会立即结束运行。
+ * （暂时认为，当doInvoke返回结果后， 其他线程还会继续执行，
+ * 因为线程池虽然创建的是后台线程，但是jvm并没有停止，所以其他后台线程仍然可以继续执行，所以会耗费资源。
+ * 这里有个问题，后台线程是在jvm停止的时候，或者自己执行完毕的时候，才结束？？ 不是在调用doInvoke方法的线程停止的时候就结束？？）
+ *
  * ForkingClusterInvoker 的应用场景是在一些对实时性要求比较高读操作（注意是读操作，并行写操作可能不安全）下使用，但这将会耗费更多的资源。
  */
 public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
@@ -88,6 +92,7 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
             }
 
             RpcContext.getContext().setInvokers((List) selected);
+            // 这两个是局部变量，也就多次调用本方法时，他们之间的变量值是不同的。
             final AtomicInteger count = new AtomicInteger();
             final BlockingQueue<Object> ref = new LinkedBlockingQueue<>();
             // 遍历 selected 列表
@@ -99,7 +104,7 @@ public class ForkingClusterInvoker<T> extends AbstractClusterInvoker<T> {
                         try {
                             // 进行远程调用
                             Result result = invoker.invoke(invocation);
-                            // 将结果存到阻塞队列中
+                            // 将上句返回的结果存到阻塞队列中
                             ref.offer(result);
                         } catch (Throwable e) {
                             int value = count.incrementAndGet();

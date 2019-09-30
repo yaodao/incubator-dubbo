@@ -38,6 +38,7 @@ public interface Invocation {
 
     /**
      * get parameter types.
+     * 获取参数的类型列表
      *
      * @return parameter types.
      * @serial
@@ -46,6 +47,7 @@ public interface Invocation {
 
     /**
      * get arguments.
+     * 获取参数的值
      *
      * @return arguments.
      * @serial
