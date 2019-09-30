@@ -29,7 +29,10 @@ import java.util.List;
  * <a href="http://en.wikipedia.org/wiki/Directory_service">Directory Service</a>
  *
  *
- * Directory代表多个Invoker，可以把它看成List<Invoker>，但与List不同的是，它的值可能是动态变化的，比如注册中心推送变更。
+ * 服务目录在获取注册中心的服务配置信息后，会为每条配置信息生成一个 Invoker 对象，
+ * 并把这个 Invoker 对象存储起来，这个 Invoker 才是服务目录最终持有的对象。
+ *
+ * 也就是说Directory代表多个Invoker，可以把它看成List<Invoker>，但与List不同的是，这个集合中的元素会随注册中心的变化而进行动态调整。
  * Cluster将Directory中的多个Invoker伪装成一个Invoker，对上层透明，伪装过程包含了容错逻辑，调用失败后，重试另一个。
  * @see org.apache.dubbo.rpc.cluster.Cluster#join(Directory)
  */

@@ -88,7 +88,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
 
     @Override
     public List<Invoker<T>> list(Invocation invocation) throws RpcException {
-        // 当前目录是否被销毁
+        // 当前目录是否已被销毁
         if (destroyed) {
             throw new RpcException("Directory already destroyed .url: " + getUrl());
         }
@@ -110,6 +110,7 @@ public abstract class AbstractDirectory<T> implements Directory<T> {
         this.routerChain = routerChain;
     }
 
+    // 把入参routers添加到成员变量routerChain的routers集合中
     protected void addRouters(List<Router> routers) {
         routers = routers == null ? Collections.emptyList() : routers;
         // 把入参routers添加到routerChain对象的routers集合中

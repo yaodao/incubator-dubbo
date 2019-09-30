@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 /**
  * Router chain
  */
-// 暂时理解为 包含多个路由器对象的类
+// 暂时理解为 包含多个路由对象的类
 public class RouterChain<T> {
 
     // full list of addresses from registry, classified by method name.
@@ -85,7 +85,7 @@ public class RouterChain<T> {
      * @param routers routers from 'router://' rules in 2.6.x or before.
      */
     // 给当前对象的成员变量routers赋值。
-    // 将入参routers集合 和 成员变量builtinRouters集合，合并到一起，赋值给当前对象的成员变量routers
+    // （将入参routers集合 和 成员变量builtinRouters集合，合并到一起，赋值给当前对象的成员变量routers）
     public void addRouters(List<Router> routers) {
         List<Router> newRouters = new CopyOnWriteArrayList<>();
         newRouters.addAll(builtinRouters);
