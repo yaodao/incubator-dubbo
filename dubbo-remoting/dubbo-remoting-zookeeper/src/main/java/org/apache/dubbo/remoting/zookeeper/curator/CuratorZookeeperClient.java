@@ -50,6 +50,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
 
     static final Charset charset = Charset.forName("UTF-8");
     private final CuratorFramework client;
+    // key是path，value是该path对应的TreeCache对象
     private Map<String, TreeCache> treeCacheMap = new ConcurrentHashMap<>();
 
 
@@ -150,7 +151,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     // 返回path下的所有子节点
     public List<String> getChildren(String path) {
         try {
-            // 获取path下的所有子节点
+            // 获取path下的所有子节点 （就是path下的所有直接子节点的名字，只有直接的子节点名，不带从根开始的路径）
             return client.getChildren().forPath(path);
         } catch (NoNodeException e) {
             return null;
@@ -160,6 +161,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
+    // 检验path节点是否存在，true 存在
     public boolean checkExists(String path) {
         try {
             if (client.checkExists().forPath(path) != null) {
@@ -176,6 +178,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
+    // 获取path节点的内容，以String类型返回
     public String doGetContent(String path) {
         try {
             byte[] dataBytes = client.getData().forPath(path);
@@ -194,11 +197,13 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
+    // 创建一个监听器，同时给里面的子节点监听器赋值
     public CuratorZookeeperClient.CuratorWatcherImpl createTargetChildListener(String path, ChildListener listener) {
         return new CuratorZookeeperClient.CuratorWatcherImpl(client, listener);
     }
 
     @Override
+    // 为path的直接子节点添加cruator监听，并且返回这个path的所有子节点名
     public List<String> addTargetChildListener(String path, CuratorWatcherImpl listener) {
         try {
             //添加监听，并且返回这个目录当前所有子节点
@@ -212,6 +217,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
+    // 创建一个监听器，同时给里面的数据监听器赋值
     protected CuratorZookeeperClient.CuratorWatcherImpl createTargetDataListener(String path, DataListener listener) {
         return new CuratorWatcherImpl(client, listener);
     }
@@ -222,6 +228,9 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
+    // 为path添加TreeCache类型的监听器。
+    // 具体步骤是：为path创建对应的TreeCache对象，将入参treeCacheListener监听器添加到TreeCache对象中，这样就可以监听path的变化
+    // 以下代码，treeCache在该addTargetDataListener函数执行完毕后，并没有被回收，仍然存在并且继续监听path，（没有调用treeCache.close()会不会导致内存泄漏？？）
     protected void addTargetDataListener(String path, CuratorZookeeperClient.CuratorWatcherImpl treeCacheListener, Executor executor) {
         try {
             TreeCache treeCache = TreeCache.newBuilder(client, path).setCacheData(false).build();
@@ -238,6 +247,8 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
+    // 将Cruator监听器(targetListener)和它对应的数据监听器的联系断开（就是将它内部的数据监听器置空）
+    // 并将Cruator监听器从path节点对应的treeCache对象的监听器列表中移除 （创建TreeCache对象时，都有path做入参，这个TreeCache对象和path是对应的）
     protected void removeTargetDataListener(String path, CuratorZookeeperClient.CuratorWatcherImpl treeCacheListener) {
         TreeCache treeCache = treeCacheMap.get(path);
         if (treeCache != null) {
@@ -247,12 +258,18 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
     }
 
     @Override
-    // 将Cruator监听器(targetListener)和它对应的子节点监听器的联系断开
+    // 将Cruator监听器(targetListener)和它对应的子节点监听器的联系断开（就是将它内部的子节点监听器置空）
     public void removeTargetChildListener(String path, CuratorWatcherImpl listener) {
-        // 就是将入参listener对象中的成员变量childListener置空
         listener.unwatch();
     }
 
+
+    /**
+     * 这是个监听器类， 实现了两个接口
+     * 表示该类可以作为CuratorWatcher类型的监听器，传入类似 client.getChildren().usingWatcher(listener).forPath(path);这种usingWatcher函数中。。
+     * 也可以作为TreeCacheListener类型的监听器，传入TreeCache对象中。
+     * 本代码中，也是用了这两种用法。
+     */
     static class CuratorWatcherImpl implements CuratorWatcher, TreeCacheListener {
 
         private CuratorFramework client;
@@ -280,11 +297,13 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
         public void process(WatchedEvent event) throws Exception {
             if (childListener != null) {
                 String path = event.getPath() == null ? "" : event.getPath();
+                // 调用childListener这个监听器的childChanged方法（其实就相当于触发了childListener这个监听器，就执行childListener的childChanged方法）
                 childListener.childChanged(path,
                         // if path is null, curator using watcher will throw NullPointerException.
                         // if client connect or disconnect to server, zookeeper will queue
                         // watched event(Watcher.Event.EventType.None, .., path = null).
                         StringUtils.isNotEmpty(path)
+                                  // 给path的直接子节点加监听（会监听增加和删除直接子节点，不监听修改数据，试过）
                                 ? client.getChildren().usingWatcher(this).forPath(path)
                                 : Collections.<String>emptyList());
             }
@@ -326,6 +345,7 @@ public class CuratorZookeeperClient extends AbstractZookeeperClient<CuratorZooke
                         break;
 
                 }
+                // 调用dataListener监听器的dataChanged方法（其实就相当于触发了dataListener监听器，就执行dataListener的dataChanged方法）
                 dataListener.dataChanged(path, content, eventType);
             }
         }

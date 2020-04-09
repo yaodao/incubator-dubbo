@@ -37,12 +37,17 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
 
     private final URL url;
 
+    // 一个状态监听器集合，用于存储所有的StateListener监听器对象。
+    // 当zk连接状态改变时，会遍历这个集合，依次执行每个状态监听器对应的方法。
+    // 所以，想要在zk连接状态改变时，做点自己的事，就实现这个StateListener接口，添加到这个集合中就行。
+    // （因为在代码中这个集合只是在zk连接状态改变时才被使用到）
     private final Set<StateListener> stateListeners = new CopyOnWriteArraySet<StateListener>();
 
     // key是zk上的路径， value是该路径对应的 子节点监听器 和 cruator监听器
     // （ cruator监听器是由子节点监听器转换来的，因为ChildListener是dubbo提供的监听器接口，需要转换为cruator的监听器接口，才能使用Curator框架操作zk）
     private final ConcurrentMap<String, ConcurrentMap<ChildListener, TargetChildListener>> childListeners = new ConcurrentHashMap<String, ConcurrentMap<ChildListener, TargetChildListener>>();
 
+    // key是zk上的路径， value是该路径对应的 数据监听器 和 cruator监听器
     private final ConcurrentMap<String, ConcurrentMap<DataListener, TargetDataListener>> listeners = new ConcurrentHashMap<String, ConcurrentMap<DataListener, TargetDataListener>>();
 
     private volatile boolean closed = false;
@@ -66,9 +71,10 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
      *
      *
      * （感觉用不上递归分层创建节点路径，直接创建完整节点路径不行？？）
+     * 直接创建完整节点路径会报错，之前写注释的时候没有用过zk
      *
      * @param path 举例 "/dubbo/org.apache.dubbo.demo.DemoService/providers/provider11"
-     * @param ephemeral 是否临时节点 true，是
+     * @param ephemeral 是否临时节点 true，
      *                  从代码来看ephemeral仅仅用于指定最外层的节点是否为临时节点，内层的节点已经在程序中写死为false（不是临时节点）
      *                  也就是上面例子中 ，指定provider11是否为临时节点
      */
@@ -104,10 +110,10 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
     }
 
     @Override
-    // 将参数ChildListener监听器转成cruator监听器，缓存childListeners新增entry （listener， cruator监听器）
-    // 返回参数path下的所有的子节点 （这个path是被cruator监听器监听的）
+    // 将path对应的ChildListener和cruator监听器 添加到成员变量listeners中，并为path的直接子节点添加cruator监听器
+    // 返回参数path的所有的子节点 （这个path下的直接子节点是被cruator监听器监听的）
     public List<String> addChildListener(String path, final ChildListener listener) {
-        // 将path和该path对应的 子节点监听器 和 cruator监听器 添加到成员变量childListeners中
+        // 将path和该path对应的 子节点监听器 和 cruator监听器 添加到缓存childListeners中
         // 因为ChildListener是dubbo提供的监听器接口，需要转换为cruator的监听器接口
         ConcurrentMap<ChildListener, TargetChildListener> listeners = childListeners.get(path);
         if (listeners == null) {
@@ -123,7 +129,7 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
             listeners.putIfAbsent(listener, createTargetChildListener(path, listener));
             targetListener = listeners.get(listener);
         }
-        // 返回使用cruator监听器监听的path下的所有的子节点（targetListener就是cruator监听器）
+        // 为path的直接子节点添加cruator监听，并且返回这个path的所有子节点名（targetListener就是cruator监听器）
         return addTargetChildListener(path, targetListener);
     }
 
@@ -133,35 +139,41 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
     }
 
     @Override
+    // 将path对应的DataListener和cruator监听器 添加到成员变量listeners中，并为path添加TreeCache类型的监听器
     public void addDataListener(String path, DataListener listener, Executor executor) {
         ConcurrentMap<DataListener, TargetDataListener> dataListenerMap = listeners.get(path);
         if (dataListenerMap == null) {
             listeners.putIfAbsent(path, new ConcurrentHashMap<DataListener, TargetDataListener>());
             dataListenerMap = listeners.get(path);
         }
+        // 创建DataListener对应的cruator监听器
         TargetDataListener targetListener = dataListenerMap.get(listener);
         if (targetListener == null) {
             // 若还没有对应的cruator监听器，则新建一个
             // createTargetDataListener会对DataListener监听器进行转换，转成cruator监听器
             dataListenerMap.putIfAbsent(listener, createTargetDataListener(path, listener));
+            // 取出转后的cruator监听器
             targetListener = dataListenerMap.get(listener);
         }
+        // 为path添加TreeCache类型的监听器。targetListener就是TreeCache对象使用的监听器
         addTargetDataListener(path, targetListener, executor);
     }
 
     @Override
+    // 移除path对应的数据监听器listener， 并将path对应的cruator监听器与数据监听器的联系断开。
     public void removeDataListener(String path, DataListener listener ){
         ConcurrentMap<DataListener, TargetDataListener> dataListenerMap = listeners.get(path);
         if (dataListenerMap != null) {
             TargetDataListener targetListener = dataListenerMap.remove(listener);
             if(targetListener != null){
+                // 将Cruator监听器(targetListener)和它对应的数据监听器的联系断开
                 removeTargetDataListener(path, targetListener);
             }
         }
     }
 
     @Override
-    // 从成员变量childListeners中，移除path对应的子节点监听器listener 和cruator监听器
+    // 移除path对应的子节点监听器listener， 并将path对应的cruator监听器与该子节点监听器的联系断开。
     public void removeChildListener(String path, ChildListener listener) {
         // 取path对应的子节点监听器 和 cruator监听器
         ConcurrentMap<ChildListener, TargetChildListener> listeners = childListeners.get(path);
@@ -195,6 +207,8 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
     }
 
     @Override
+    // 这个create和前面的create函数功能一样，
+    // 区别是，若path节点已存在，则会删除，再重新创建。
     public void create(String path, String content, boolean ephemeral) {
         if (checkExists(path)) {
             delete(path);
@@ -211,6 +225,7 @@ public abstract class AbstractZookeeperClient<TargetDataListener, TargetChildLis
     }
 
     @Override
+    // 取path节点的内容，若path不存在则返回null
     public String getContent(String path) {
         if (!checkExists(path)) {
             return null;
